@@ -19,6 +19,187 @@ enum DataValueType {
 	BOOLEAN = 12
 }
 
+class FormulaManager {
+	private _formulaElements: FormulaElement[];
+
+	constructor() {
+		this._formulaElements = [];
+	}
+
+	public getCurrentElement(caretIndex: number): FormulaElement {
+		var startFrom: number = 0;
+		var isFounded: boolean = false;
+		var selectedElement: FormulaElement = this._formulaElements[this._formulaElements.length-1];
+		this._formulaElements.forEach((element)=> {
+			if (!isFounded) {
+				if (caretIndex >= startFrom && caretIndex < (startFrom + element.contentLength)) {
+					selectedElement = element;
+					isFounded = true;
+				} else {
+					startFrom += element.contentLength;
+				}
+			}
+		})
+		return selectedElement;
+	}
+
+	public getFirstElement(): FormulaElement | null {
+		return this._formulaElements.length
+			? this._formulaElements[0]
+			: null;
+	}
+
+	public getLastElement(): FormulaElement | null {
+		return this._formulaElements.length
+			? this._formulaElements[this._formulaElements.length - 1]
+			: null;
+	}
+
+	public getElementByIndex(index: number): FormulaElement | null {
+		return index >= 0 && index < this._formulaElements.length
+			? this._formulaElements[index]
+			: null;
+	}
+
+	public getElementPosition(element: FormulaElement): number {
+		return this._formulaElements.indexOf(element);
+	}
+
+	public getNextElement(element: FormulaElement): FormulaElement | null {
+		var position = this.getElementPosition(element);
+		if (position < 0 || element === this.getLastElement()) {
+			return null;
+		}
+		return this.getElementByIndex(position + 1);
+	}
+
+	public hasPrevElement(element: FormulaElement): boolean {
+		var position = this.getElementPosition(element);
+		if (position < 0 || element === this.getFirstElement()) {
+			return false;
+		}
+		return true;
+	}
+
+	public getPrevElement(element: FormulaElement): FormulaElement | null {
+		var position = this.getElementPosition(element);
+		if (position < 0 || element === this.getFirstElement()) {
+			return null;
+		}
+		return this.getElementByIndex(position - 1);
+	}
+
+	public insertAtPosition(element: FormulaElement, position: number) {
+		var correctedPosition = Math.max(Math.min(position, this._formulaElements.length), 0)
+		this._formulaElements.splice(correctedPosition, 0, element);
+	}
+
+	public add(element: FormulaElement) {
+		this._formulaElements.push(element);
+	}
+
+	public insertBefore(insertedElement: FormulaElement, targetElement: FormulaElement) {
+		var position = this.getElementPosition(targetElement);
+		this.insertAtPosition(insertedElement, position - 1);
+	}
+
+	public insertAfter(insertedElement: FormulaElement, targetElement: FormulaElement) {
+		var position = this.getElementPosition(targetElement);
+		this.insertAtPosition(insertedElement, position + 1);
+	}
+
+	public generateFormulaDisplayElementList(): FormulaDisplayElement[] {
+		var response: FormulaDisplayElement[] = [];
+		this._formulaElements.forEach(item => response.push(item.generateDisplayElement()));
+		return response;
+	}
+
+	public getFormulaElementCaretIndex(element: FormulaElement, caretIndex: number): number {
+		var totalElementStartPosition: number = 0;
+		for (var i = 0; i < this.getElementPosition(element); i++) {
+			totalElementStartPosition+= this._formulaElements[i].contentLength;
+		}
+		return caretIndex - totalElementStartPosition;
+	}
+
+	public actualizeFormulaElementsDataValueType(): void {
+		this._formulaElements.forEach(x=>{
+			if (x.canChangeType()) {
+				x.type = FormulaElementType.CONSTANT;
+			}
+			if (x.canChangeDataValueType()) {
+				x.dataValueType = this._parseDataValueType(x.content);
+			}
+		});
+	}
+
+	public removeEmptyElements() {
+		for (let i = this._formulaElements.length -1; i >= 0; i--) {
+			var element = this._formulaElements[i];
+			if (element.isEmpty()) {
+				this._formulaElements.splice(i, 1);
+			}
+		}
+	}
+
+	public removeElement(formulaElement: FormulaElement | null) {
+		if (formulaElement) {
+			var positon = this.getElementPosition(formulaElement);
+			this._formulaElements.splice(positon, 1);
+		}
+	}
+
+	public getSerializedElements(): string {
+		return JSON.stringify(this._formulaElements);
+	}
+
+	public tryJoinElements(leftElement: FormulaElement | null, rightElement: FormulaElement | null): boolean {
+		if (leftElement && leftElement.merge(rightElement)) {
+			this.removeElement(rightElement);
+		}
+		return false;
+	}
+
+	private _parseDataValueType(value: any): DataValueType {
+		value = value.trim();
+		if (parseInt(value) == value) {
+			return DataValueType.INTEGER;
+		}
+		if (parseFloat(value) == value) {
+			return DataValueType.FLOAT;
+		}
+		if (value.length && value[0] === '"') {
+			return DataValueType.TEXT;
+		}
+		return DataValueType.UNSETTED;
+	}
+
+}
+
+class FormulaDisplayElement {
+	content: string;
+	type: FormulaElementType;
+	dataValueType: DataValueType;
+
+	constructor(content: string, type: FormulaElementType, dataValueType: DataValueType) {
+		this.content = content;
+		this.type = type;
+		this.dataValueType = dataValueType;
+	}
+
+	public generateVisualizatorStyleClass(): string {
+		switch (this.dataValueType) {
+			case DataValueType.FLOAT:
+			case DataValueType.INTEGER:
+				return "dvt-number";
+			case DataValueType.TEXT:
+				return "dvt-text";
+			default:
+				return "dvt-undefined";
+		}
+	}
+}
+
 class FormulaElement {
 	private _type: FormulaElementType = FormulaElementType.UNSETTED;
 	private _dataValueType: DataValueType = DataValueType.UNSETTED;
@@ -56,18 +237,8 @@ class FormulaElement {
 		return this.content.length;
 	}
 
-	public generateVisualizatorPart(): string {
-		return '<span class="' + this.generateVisualizatorStyleClass() + '">' + this._content + '</span>'
-	}
-
-	public generateVisualizatorStyleClass(): string {
-		switch (this.dataValueType) {
-			case DataValueType.FLOAT:
-			case DataValueType.INTEGER:
-				return "dvt-number";
-			default:
-				return "dvt-undefined";
-		}
+	public generateDisplayElement(): FormulaDisplayElement {
+		return new FormulaDisplayElement(this.content, this.type, this.dataValueType);
 	}
 
 	public canChangeType(): boolean {
@@ -120,7 +291,7 @@ class FormulaElement {
 	}
 
 	public split(position: number): FormulaElement | null {
-		if (position > 0 && position < this.contentLength -1) {
+		if (position > 0 && position < this.contentLength) {
 			var leftContent = this.content.slice(0, position);
 			var rightContent = this.content.slice(position);
 			var clone = this.clone();
@@ -133,6 +304,17 @@ class FormulaElement {
 
 	public isEmpty(): boolean {
 		return this.content === null || this.content === undefined || this.content === "";
+	}
+
+	public merge(source: FormulaElement | null): boolean {
+		if (!source) {
+			return false;
+		}
+		if (source.type === FormulaElementType.SINGLEOPERATION) {
+			return false;
+		}
+		this.content += source.content;
+		return true;
 	}
 
 }
@@ -185,18 +367,35 @@ export class ITFormulaEditorComponent implements OnInit {
 		new KeyCodeItem("KeyI", KeyMode.ENABLED),
 		new KeyCodeItem("KeyU", KeyMode.ENABLED),
 		new KeyCodeItem("KeyZ", KeyMode.ENABLED),
+		new KeyCodeItem("Shift"),
 		new KeyCodeItem("ShiftLeft"),
 		new KeyCodeItem("ShiftRight"),
+		new KeyCodeItem("Control"),
 		new KeyCodeItem("ControlLeft"),
 		new KeyCodeItem("ControlRight"),
+		new KeyCodeItem("Alt"),
 		new KeyCodeItem("AltLeft"),
 		new KeyCodeItem("AltRight"),
-		new KeyCodeItem("Alt"),
 		new KeyCodeItem("Meta"),
+		new KeyCodeItem("MetaLeft"),
+		new KeyCodeItem("MetaRight"),
 		new KeyCodeItem("ContextMenu"),
+		new KeyCodeItem("NumLock"),
+		new KeyCodeItem("PageDown"),
+		new KeyCodeItem("PageUp"),
+		new KeyCodeItem("Numpad5", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), //Clear
+		new KeyCodeItem("Numpad9", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), //PageUp
+		new KeyCodeItem("Numpad3", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), //PageUp
+		new KeyCodeItem("Insert"),
+		new KeyCodeItem("ScrollLock"),
+		new KeyCodeItem("Pause"),
 		new KeyCodeItem("KeyO", KeyMode.ENABLED),
 		new KeyCodeItem("KeyS", KeyMode.ENABLED),
-		new KeyCodeItem("KeyV", KeyMode.ENABLED)
+		new KeyCodeItem("KeyV", KeyMode.ENABLED),
+		new KeyCodeItem("Tab"),
+		new KeyCodeItem("CapsLock"),
+		
+		
 	];
 
 	private changelessKeys: KeyCodeItem[] = [
@@ -206,6 +405,13 @@ export class ITFormulaEditorComponent implements OnInit {
 		new KeyCodeItem("ArrowDown"),
 		new KeyCodeItem("End"),
 		new KeyCodeItem("Home"),
+
+		new KeyCodeItem("Numpad6", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // ArrowRight
+		new KeyCodeItem("Numpad4", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // ArrowLeft
+		new KeyCodeItem("Numpad8", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // ArrowUp
+		new KeyCodeItem("Numpad2", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // ArrowDown
+		new KeyCodeItem("Numpad1", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // End
+		new KeyCodeItem("Numpad7", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // Home
 		
 		new KeyCodeItem("F1"),
 		new KeyCodeItem("F2"),
@@ -219,6 +425,9 @@ export class ITFormulaEditorComponent implements OnInit {
 		new KeyCodeItem("F10"),
 		new KeyCodeItem("F11"),
 		new KeyCodeItem("F12"),
+		
+		
+		
 	];
 
 	private removedKeys: KeyCodeItem[] = [
@@ -243,14 +452,17 @@ export class ITFormulaEditorComponent implements OnInit {
 	];
 
 	private previousFormulaContent: string = '';
-	formulaElements: FormulaElement[] = [];
+	
+	formulaDisplayElements: FormulaDisplayElement[];
+	formulaManager: FormulaManager;
 
 	constructor() { 
 		this.cursorIndex = 0;
 		this.caretIndex = 0;
 		this.cursorX = 0;
 		this.cursorY = 0;
-		this.formulaElements.push(this.getEmptyFormulaElement());
+		this.formulaManager = new FormulaManager();
+		this.formulaDisplayElements = [];
 		this.updateVisualizatorContent();
 	}
 
@@ -258,10 +470,7 @@ export class ITFormulaEditorComponent implements OnInit {
 	}
 
 	updateVisualizatorContent(): void {
-		var content = '';
-		this.formulaElements.forEach((formulaElementItem) => {
-			content
-		})
+		this.formulaDisplayElements = this.formulaManager.generateFormulaDisplayElementList();
 	}
 
 	onKeyDown(event: KeyboardEvent): void {
@@ -278,94 +487,71 @@ export class ITFormulaEditorComponent implements OnInit {
 		}
 		
 		if (this.containKeyInCollection(this.changelessKeys, event)) {
-			this.processChangelessOperation(event);
-			event.preventDefault();
-			event.stopPropagation();
-
-			this.finalizedWork();
-			return;
-		}
-		if (this.containKeyInCollection(this.removedKeys, event)) {
+			if (this.processChangelessOperation(event)) {
+				event.preventDefault();
+				event.stopPropagation();
+			}
+		} else if (this.containKeyInCollection(this.removedKeys, event)) {
 			this.processRemoveOperation(event);
-			event.preventDefault();
-			event.stopPropagation();
-			
-			this.finalizedWork();
-			return;
-		}
-
-		if (this.containKeyInCollection(this.singleOperators, event)) {
+		} else if (this.containKeyInCollection(this.singleOperators, event)) {
 			this.processSingleOperation(event);
-			event.preventDefault();
-			event.stopPropagation();
-
-			this.finalizedWork();
-			return;
+		} else {
+			this.processCommonOperation(event);
 		}
-
-		this.processKeyboardEvent(event);
-		event.preventDefault();
-		event.stopPropagation();
-
+		
+		this.formulaManager.removeEmptyElements();
+		this.formulaManager.actualizeFormulaElementsDataValueType();
+		this.updateVisualizatorContent();
 		this.finalizedWork();
+		
 	}
 
-	processKeyboardEvent(event: KeyboardEvent): void {
-		var formulaElement = this.getCurrentFormulaElement(this.caretIndex);
-		if (formulaElement === null || formulaElement === undefined) {
-			formulaElement = this.getEmptyFormulaElement();
-			this.formulaElements.push(formulaElement);
-		}
-		var formulaElementIndex = this.formulaElements.indexOf(formulaElement);
-		var formulaElementCursorPosition = this.getFormulaElementCursorPosition(formulaElement, this.caretIndex);
-		if (formulaElement.type === FormulaElementType.SINGLEOPERATION) {
-			if (formulaElementCursorPosition === 0) {
-				if (formulaElementIndex === 0) {
-					formulaElement = this.getEmptyFormulaElement();
-					this.formulaElements.splice(0, 0, formulaElement);
-				} else {
-					formulaElement = this.formulaElements[formulaElementIndex - 1];
+	isEmpty(value: any): boolean {
+		return value === null || value === undefined || value === '' || (Array.isArray(value) && !value.length);
+	}
 
-					if (formulaElement.type === FormulaElementType.SINGLEOPERATION) {
-						formulaElementIndex = this.formulaElements.indexOf(formulaElement);
-						formulaElement = this.getEmptyFormulaElement();
-						this.formulaElements.splice(formulaElementIndex + 1, 0, formulaElement);
-						formulaElementIndex = this.formulaElements.indexOf(formulaElement);
-					}
-				}
-				formulaElementCursorPosition = this.getFormulaElementCursorPosition(formulaElement, this.caretIndex);
-			} else {
-				if (formulaElementIndex >= this.formulaElements.length - 1) {
-					formulaElement = this.getEmptyFormulaElement();
-					this.formulaElements.push(formulaElement);
-				} else {
-					formulaElement = this.formulaElements[formulaElementIndex + 1];
-				}
-				formulaElementCursorPosition = this.getFormulaElementCursorPosition(formulaElement, this.caretIndex);
-			}
+	processCommonOperation(event: KeyboardEvent): void {
+		var formulaElement = this.formulaManager.getCurrentElement(this.caretIndex);
+		if (this.isEmpty(formulaElement)) {
+			formulaElement = this.generateEmptyFormulaElement();
+			this.formulaManager.add(formulaElement);
 		}
-		formulaElement.insertAt(event.key, formulaElementCursorPosition);
+		if (formulaElement.type === FormulaElementType.SINGLEOPERATION) {
+			var nextFormulaElement = this.formulaManager.getNextElement(formulaElement);
+			if (nextFormulaElement == null || nextFormulaElement.type === FormulaElementType.SINGLEOPERATION) {
+				nextFormulaElement = this.generateEmptyFormulaElement();
+				this.formulaManager.insertAfter(nextFormulaElement, formulaElement);
+			}
+			formulaElement = nextFormulaElement;
+		}
+		var formulaElementCaretIndex = this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
+		if (event.key === '"' && formulaElement.isEmpty() && (formulaElement.type === FormulaElementType.UNSETTED || (formulaElement.type === FormulaElementType.CONSTANT && (formulaElement.dataValueType === DataValueType.UNSETTED || formulaElement.dataValueType === DataValueType.TEXT)))) {
+			formulaElement.insertAt('""', formulaElementCaretIndex);
+		} else {
+			formulaElement.insertAt(event.key, formulaElementCaretIndex);
+		}
+		
 		this.caretIndex += event.key.length;
 	}
 
-	getFormulaElementCursorPosition(formulaElement: FormulaElement, cursorIndex: number): number {
-		var totalelementStartPosition: number = 0;
-		for (var i = 0; i < this.formulaElements.indexOf(formulaElement); i++) {
-			totalelementStartPosition+= this.formulaElements[i].contentLength;
-		}
-		return cursorIndex - totalelementStartPosition;
-	}
-
-	processChangelessOperation(event: KeyboardEvent): void {
-		if (event.code === "ArrowLeft") {
+	processChangelessOperation(event: KeyboardEvent): boolean {
+		if (event.key === "ArrowLeft") {
 			this.caretIndex = Math.max(this.caretIndex - 1, 0);
-		} else if (event.code === "ArrowRight") {
-			this.caretIndex = Math.min(this.caretIndex + 1, this.getTotalContentLength());
-		} else if (event.code === "End") {
-			this.caretIndex = this.getTotalContentLength();
-		} else if (event.code === "Home") {
-			this.caretIndex = 0;
+			return true;
 		}
+		if (event.key === "ArrowRight") {
+			this.caretIndex = Math.min(this.caretIndex + 1, this.getTotalContentLength());
+			return true;
+		}
+		if (event.key === "End") {
+			this.caretIndex = this.getTotalContentLength();
+			return true;
+		}
+		if (event.key === "Home") {
+			this.caretIndex = 0;
+			return true;
+		}
+		return false;
 	}
 
 	getTotalContentLength(): number {
@@ -373,55 +559,50 @@ export class ITFormulaEditorComponent implements OnInit {
 	}
 
 	processRemoveOperation(event: KeyboardEvent): void {
-		var formulaElement = this.getCurrentFormulaElement(this.caretIndex);
-		var formulaElementIndex = this.formulaElements.indexOf(formulaElement);
-		var prevFormulaElement = formulaElementIndex > 0 ? this.formulaElements[formulaElementIndex - 1] : null;
-		var nextFormulaElement = formulaElementIndex < this.formulaElements.length ? this.formulaElements[formulaElementIndex + 1] : null;
+		var formulaElement: FormulaElement | null = this.formulaManager.getCurrentElement(this.caretIndex);
+		if (formulaElement == null) {
+			return;
+		}
 		if (event.code === "Backspace") {
-			if (formulaElement.removeByBackspace(this.getFormulaElementCursorPosition(formulaElement, this.caretIndex)) ||
-				(prevFormulaElement != null && prevFormulaElement.removeByBackspace(this.getFormulaElementCursorPosition(prevFormulaElement, this.caretIndex)))) {
+			if (this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex) <= 0) {
+				formulaElement = this.formulaManager.getPrevElement(formulaElement);
+			}
+			if (formulaElement != null && formulaElement.removeByBackspace(this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex))) {
 				this.caretIndex--;
 			}
-		}
-
-		if (event.code === "Delete") {
-			if (formulaElement.removeByDelete(this.getFormulaElementCursorPosition(formulaElement, this.caretIndex)) ||
-				(nextFormulaElement != null && nextFormulaElement.removeByDelete(this.getFormulaElementCursorPosition(nextFormulaElement, this.caretIndex)))) {
+		} else if (event.code === "Delete") {
+			if (this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex) >= formulaElement.contentLength) {
+				formulaElement = this.formulaManager.getNextElement(formulaElement);
 			}
+			if (formulaElement != null && formulaElement.removeByDelete(this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex))) {
+			}
+		}
+		if (formulaElement != null && formulaElement.isEmpty()) {
+			this.formulaManager.tryJoinElements(this.formulaManager.getPrevElement(formulaElement), this.formulaManager.getNextElement(formulaElement))
 		}
 	}
 
 	processSingleOperation(event: KeyboardEvent): void {
-		var formulaElement = this.getCurrentFormulaElement(this.caretIndex);
-		var formulaElementIndex = this.formulaElements.indexOf(formulaElement);
-		var innerCaretPosition = this.getFormulaElementCursorPosition(formulaElement, this.caretIndex);
-		var operationFormulaElement = this.getSingleOperationFormulaElement(event.key);
-		if (innerCaretPosition === 0) {
-			this.formulaElements.splice(formulaElementIndex, 0, operationFormulaElement);
-			this.caretIndex++;
-		} else if (innerCaretPosition >= formulaElement.contentLength) {
-			if (formulaElementIndex < this.formulaElements.length) {
-				this.formulaElements.splice(formulaElementIndex + 1, 0, operationFormulaElement);
-			} else {
-				this.formulaElements.push(operationFormulaElement);
-			}
-			this.caretIndex++;
-		} else {
-			if (formulaElementIndex < this.formulaElements.length) {
-				this.formulaElements.splice(formulaElementIndex + 1, 0, operationFormulaElement);
-			} else {
-				this.formulaElements.push(operationFormulaElement);
-			}
-			var rightFormulaElement = formulaElement.split(innerCaretPosition);
-			if (rightFormulaElement != null) {
-				if (formulaElementIndex < this.formulaElements.length) {
-					this.formulaElements.splice(formulaElementIndex + 2, 0, rightFormulaElement);
-				} else {
-					this.formulaElements.push(rightFormulaElement);
-				}
-			}
-			this.caretIndex++;
+		var operationFormulaElement = this.generateSingleOperationFormulaElement(event.key);
+
+		var formulaElement = this.formulaManager.getCurrentElement(this.caretIndex);
+		if (formulaElement === null || formulaElement === undefined) {
+			formulaElement = this.generateEmptyFormulaElement();
+			this.formulaManager.add(formulaElement);
 		}
+		var innerCaretIndex = this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex)
+		if (innerCaretIndex === 0) {
+			this.formulaManager.insertBefore(operationFormulaElement, formulaElement);
+		} else if (innerCaretIndex >= formulaElement.contentLength) {
+			this.formulaManager.insertAfter(operationFormulaElement, formulaElement);
+		} else {
+			this.formulaManager.insertAfter(operationFormulaElement, formulaElement);
+			var rightFormulaElement = formulaElement.split(innerCaretIndex);
+			if (rightFormulaElement != null) {
+				this.formulaManager.insertAfter(rightFormulaElement, operationFormulaElement);
+			}
+		}
+		this.caretIndex++;
 	}
 
 	containKeyInCollection(collection:KeyCodeItem[], event: KeyboardEvent) {
@@ -432,16 +613,16 @@ export class ITFormulaEditorComponent implements OnInit {
 	equalKeyCode(event: KeyboardEvent, keyCode: KeyCodeItem) {
 		var response = event.code === keyCode.code;
 		if (keyCode.ctrMode !== KeyMode.IGNORED) {
-			response = response && keyCode.ctrMode === KeyMode.ENABLED && event.ctrlKey;
+			response = response && (keyCode.ctrMode === KeyMode.ENABLED && event.ctrlKey || keyCode.ctrMode === KeyMode.DISABLED && !event.ctrlKey);
 		}
 		if (keyCode.shiftMode !== KeyMode.IGNORED) {
-			response = response && keyCode.shiftMode === KeyMode.ENABLED && event.shiftKey;
+			response = response && (keyCode.shiftMode === KeyMode.ENABLED && event.shiftKey || keyCode.shiftMode === KeyMode.DISABLED && !event.shiftKey);
 		}
 		if (keyCode.altMode !== KeyMode.IGNORED) {
-			response = response && keyCode.altMode === KeyMode.ENABLED && event.altKey;
+			response = response && (keyCode.altMode === KeyMode.ENABLED && event.altKey || keyCode.altMode === KeyMode.DISABLED && !event.altKey);
 		}
 		if (keyCode.numlockMode !== KeyMode.IGNORED) {
-			response = response && keyCode.numlockMode === KeyMode.ENABLED && event.getModifierState("NumLock");
+			response = response && (keyCode.numlockMode === KeyMode.ENABLED && event.getModifierState("NumLock") || keyCode.numlockMode === KeyMode.DISABLED && !event.getModifierState("NumLock"));
 		}
 		return response;
 	}
@@ -450,31 +631,14 @@ export class ITFormulaEditorComponent implements OnInit {
 		return keyMode !== KeyMode.IGNORED && keyMode === KeyMode.ENABLED && eventModeEnabled;
 	}
 
-	getCurrentFormulaElement(cursorIndex: number): FormulaElement {
-		var startFrom: number = 0;
-		var isFounded: boolean = false;
-		var selectedElement: FormulaElement = this.formulaElements[this.formulaElements.length-1];
-		this.formulaElements.forEach((element)=> {
-			if (!isFounded) {
-				if (cursorIndex >= startFrom && cursorIndex < (startFrom + element.contentLength)) {
-					selectedElement = element;
-					isFounded = true;
-				} else {
-					startFrom += element.contentLength;
-				}
-			}
-		})
-		return selectedElement;
-	}
-
-	getEmptyFormulaElement(): FormulaElement {
+	generateEmptyFormulaElement(): FormulaElement {
 		var element = new FormulaElement();
 		element.type = FormulaElementType.UNSETTED;
 		element.content = '';
 		return element;
 	}
 
-	getSingleOperationFormulaElement(operation: string): FormulaElement {
+	generateSingleOperationFormulaElement(operation: string): FormulaElement {
 		var element = new FormulaElement();
 		element.type = FormulaElementType.SINGLEOPERATION;
 		element.content = operation;
@@ -486,59 +650,51 @@ export class ITFormulaEditorComponent implements OnInit {
 	}
 
 	finalizedWork(): void {
-		this.removeEmptyItems();
-		this.actualizeFormulaElementsDataValueType();
+		
 		
 	}
 
 	onKeyUp(event: KeyboardEvent): void {
 		this.updateCaretPosition();
-		this.elementsLog.nativeElement.innerHTML = JSON.stringify(this.formulaElements);
-	}
-
-	removeEmptyItems(): void {
-		for (let i = this.formulaElements.length -1; i >= 0; i--) {
-			var element = this.formulaElements[i];
-			if (element.isEmpty()) {
-				this.formulaElements.splice(i, 1);
-			}
-		}
+		this.elementsLog.nativeElement.innerHTML = this.formulaManager.getSerializedElements();
+		this.updateCursorPosition(event.currentTarget);
 	}
 
 	updateCaretPosition(): void {
-		var formulaElement = this.getCurrentFormulaElement(this.caretIndex);
-		var formulaElementCursorPosition = this.getFormulaElementCursorPosition(formulaElement, this.caretIndex);
-		var formulaElementIndex = this.formulaElements.indexOf(formulaElement);
-		if (formulaElementCursorPosition < 0) {
-			formulaElement = this.formulaElements[formulaElementIndex - 1];
-			formulaElementIndex = this.formulaElements.indexOf(formulaElement);
-			formulaElementCursorPosition = this.getFormulaElementCursorPosition(formulaElement, this.caretIndex) + formulaElementCursorPosition;
+		var elementPosition = 0;
+		var formulaElementCursorPosition = 0;
+		var formulaElement = this.formulaManager.getCurrentElement(this.caretIndex);
+		if (formulaElement != null) {
+			elementPosition = this.formulaManager.getElementPosition(formulaElement);
+			formulaElementCursorPosition = this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
+			var prevFormulaElement = this.formulaManager.getPrevElement(formulaElement);
+			if (formulaElementCursorPosition < 0 && prevFormulaElement != null) {
+				elementPosition = this.formulaManager.getElementPosition(formulaElement);
+				formulaElement = prevFormulaElement;
+				formulaElementCursorPosition =  this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
+			}
 		}
+		
 
 		var el = this.visualizator.nativeElement;
 		var sel = window.getSelection();
 		
-		try {
-			var range = document.createRange()
-			range.setStart(el.childNodes[formulaElementIndex].childNodes[0], formulaElementCursorPosition)
-			range.collapse(true)
-			if (sel != null) {
-				sel.removeAllRanges();
-				sel.addRange(range)
-			}
-		} catch {
-			var sel = window.getSelection();
+		var range = document.createRange()
+		var startWrap = el.childNodes[elementPosition] || el;
+		var startEl = startWrap.childNodes[0] || startWrap;
+		range.setStart(startEl, formulaElementCursorPosition)
+		range.collapse(true)
+		if (sel != null) {
+			sel.removeAllRanges();
+			sel.addRange(range)
 		}
-		
-		
-		
 	}
 
 	updateCursorPosition(target: any): void {
 		var coords = this.getCaretCoordinates();
 		this.cursorX = coords.x;
 		this.cursorY = coords.y;
-		this.cursorIndex = this.getCaretIndex(target);
+		this.cursorIndex = this.caretIndex;
 	}
 
 
@@ -557,17 +713,6 @@ export class ITFormulaEditorComponent implements OnInit {
 
 	onMouseUp(event: MouseEvent): void {
 		this.updateCursorPosition(event.currentTarget);
-	}
-
-	actualizeFormulaElementsDataValueType(): void {
-		this.formulaElements.forEach(x=>{
-			if (x.canChangeType()) {
-				x.type = FormulaElementType.CONSTANT;
-			}
-			if (x.canChangeDataValueType()) {
-				x.dataValueType = this.parseDataValueType(x.content);
-			}
-		});
 	}
 
 	parseDataValueType(value: any): DataValueType {

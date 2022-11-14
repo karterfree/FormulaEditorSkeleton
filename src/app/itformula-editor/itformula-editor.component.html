@@ -1,6 +1,6 @@
 <div class="content-area">
     <div #visualizator class="visual-view" contenteditable="true" (keydown)="onKeyDown($event)" (keyup)="onKeyUp($event)" (paste)="onPaste($event)" (mouseup)="onMouseUp($event)">
-        <span *ngFor="let item of formulaElements" [ngClass]="item.generateVisualizatorStyleClass()">{{item.content}}</span>
+        <span *ngFor="let item of formulaDisplayElements" [ngClass]="item.generateVisualizatorStyleClass()">{{item.content}}</span>
     </div>
     <div #elementsLog></div>
 </div>
