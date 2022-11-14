@@ -203,7 +203,22 @@ export class ITFormulaEditorComponent implements OnInit {
 		new KeyCodeItem("ArrowRight"),
 		new KeyCodeItem("ArrowLeft"),
 		new KeyCodeItem("ArrowUp"),
-		new KeyCodeItem("ArrowDown")
+		new KeyCodeItem("ArrowDown"),
+		new KeyCodeItem("End"),
+		new KeyCodeItem("Home"),
+		
+		new KeyCodeItem("F1"),
+		new KeyCodeItem("F2"),
+		new KeyCodeItem("F3"),
+		new KeyCodeItem("F4"),
+		new KeyCodeItem("F5"),
+		new KeyCodeItem("F6"),
+		new KeyCodeItem("F7"),
+		new KeyCodeItem("F8"),
+		new KeyCodeItem("F9"),
+		new KeyCodeItem("F10"),
+		new KeyCodeItem("F11"),
+		new KeyCodeItem("F12"),
 	];
 
 	private removedKeys: KeyCodeItem[] = [
@@ -251,26 +266,31 @@ export class ITFormulaEditorComponent implements OnInit {
 
 	onKeyDown(event: KeyboardEvent): void {
 		this.caretIndex = this.getCaretIndex(event.currentTarget);
-		var selection = window.getSelection();
-		if (selection != null) {
-			selection.removeAllRanges();
-		}
 		this.backupFormulaContent();
 		if (this.containKeyInCollection(this.deniedKeys, event)) {
 			event.preventDefault();
 			event.stopPropagation();
 			return;
 		}
+		var selection = window.getSelection();
+		if (selection != null) {
+			selection.removeAllRanges();
+		}
+		
 		if (this.containKeyInCollection(this.changelessKeys, event)) {
 			this.processChangelessOperation(event);
 			event.preventDefault();
 			event.stopPropagation();
+
+			this.finalizedWork();
 			return;
 		}
 		if (this.containKeyInCollection(this.removedKeys, event)) {
 			this.processRemoveOperation(event);
 			event.preventDefault();
 			event.stopPropagation();
+			
+			this.finalizedWork();
 			return;
 		}
 
@@ -278,12 +298,16 @@ export class ITFormulaEditorComponent implements OnInit {
 			this.processSingleOperation(event);
 			event.preventDefault();
 			event.stopPropagation();
+
+			this.finalizedWork();
 			return;
 		}
 
 		this.processKeyboardEvent(event);
 		event.preventDefault();
 		event.stopPropagation();
+
+		this.finalizedWork();
 	}
 
 	processKeyboardEvent(event: KeyboardEvent): void {
@@ -301,6 +325,13 @@ export class ITFormulaEditorComponent implements OnInit {
 					this.formulaElements.splice(0, 0, formulaElement);
 				} else {
 					formulaElement = this.formulaElements[formulaElementIndex - 1];
+
+					if (formulaElement.type === FormulaElementType.SINGLEOPERATION) {
+						formulaElementIndex = this.formulaElements.indexOf(formulaElement);
+						formulaElement = this.getEmptyFormulaElement();
+						this.formulaElements.splice(formulaElementIndex + 1, 0, formulaElement);
+						formulaElementIndex = this.formulaElements.indexOf(formulaElement);
+					}
 				}
 				formulaElementCursorPosition = this.getFormulaElementCursorPosition(formulaElement, this.caretIndex);
 			} else {
@@ -328,10 +359,12 @@ export class ITFormulaEditorComponent implements OnInit {
 	processChangelessOperation(event: KeyboardEvent): void {
 		if (event.code === "ArrowLeft") {
 			this.caretIndex = Math.max(this.caretIndex - 1, 0);
-		}
-		if (event.code === "ArrowRight") {
-			
+		} else if (event.code === "ArrowRight") {
 			this.caretIndex = Math.min(this.caretIndex + 1, this.getTotalContentLength());
+		} else if (event.code === "End") {
+			this.caretIndex = this.getTotalContentLength();
+		} else if (event.code === "Home") {
+			this.caretIndex = 0;
 		}
 	}
 
@@ -452,9 +485,13 @@ export class ITFormulaEditorComponent implements OnInit {
 		this.previousFormulaContent = this.visualizator.nativeElement.innerHTML;
 	}
 
-	onKeyUp(event: KeyboardEvent): void {
+	finalizedWork(): void {
 		this.removeEmptyItems();
 		this.actualizeFormulaElementsDataValueType();
+		
+	}
+
+	onKeyUp(event: KeyboardEvent): void {
 		this.updateCaretPosition();
 		this.elementsLog.nativeElement.innerHTML = JSON.stringify(this.formulaElements);
 	}
