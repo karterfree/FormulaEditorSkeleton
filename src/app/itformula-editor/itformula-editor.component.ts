@@ -43,6 +43,15 @@ class FormulaManager {
 		return selectedElement;
 	}
 
+	public forceGetCurrentElement(caretIndex: number): FormulaElement {
+		var formulaElement = this.getCurrentElement(caretIndex);
+		if (!formulaElement) {
+			formulaElement = this.generateEmptyFormulaElement();
+			this.add(formulaElement);
+		}
+		return formulaElement;
+	}
+
 	public getFirstElement(): FormulaElement | null {
 		return this._formulaElements.length
 			? this._formulaElements[0]
@@ -172,6 +181,26 @@ class FormulaManager {
 			return DataValueType.TEXT;
 		}
 		return DataValueType.UNSETTED;
+	}
+
+	public getTotalContentLength(): number {
+		var length = 0;
+		this._formulaElements.forEach((x) => length+=x.contentLength);
+		return length;
+	}
+
+	public generateEmptyFormulaElement(): FormulaElement {
+		var element = new FormulaElement();
+		element.type = FormulaElementType.UNSETTED;
+		element.content = '';
+		return element;
+	}
+
+	public generateSingleOperationFormulaElement(operation: string): FormulaElement {
+		var element = new FormulaElement();
+		element.type = FormulaElementType.SINGLEOPERATION;
+		element.content = operation;
+		return element;
 	}
 
 }
@@ -325,27 +354,467 @@ enum KeyMode {
 	ENABLED = 2
 }
 
-class KeyCodeItem {
-	code: string = '';
+class KeyItem {
+	key: string = '';
 	ctrMode: KeyMode;
 	altMode: KeyMode;
 	shiftMode: KeyMode;
 	numlockMode: KeyMode;
 
-	constructor(code: string, 
+	constructor(key: string, 
 		ctrMode: KeyMode = KeyMode.IGNORED,
 		altMode: KeyMode = KeyMode.IGNORED,
 		shiftMode: KeyMode = KeyMode.IGNORED,
 		numlockMode: KeyMode = KeyMode.IGNORED) {
-		this.code = code;
+		this.key = key;
 		this.ctrMode = ctrMode;
 		this.altMode = altMode;
 		this.shiftMode = shiftMode;
 		this.numlockMode = numlockMode;
 	}
 
+	static fromKeyboardEvent(event: KeyboardEvent): KeyItem {
+		var keyItem = new KeyItem(event.key);
+		keyItem.ctrMode = event.ctrlKey ? KeyMode.ENABLED : KeyMode.DISABLED;
+		keyItem.altMode = event.altKey ? KeyMode.ENABLED : KeyMode.DISABLED;
+		keyItem.shiftMode = event.shiftKey ? KeyMode.ENABLED : KeyMode.DISABLED;
+		keyItem.numlockMode = event.getModifierState("NumLock") ? KeyMode.ENABLED : KeyMode.DISABLED;
+		return keyItem;
+	}
+
+	public equal(templateEventItem: KeyItem): boolean {
+		var response = this.key === templateEventItem.key;
+		if (templateEventItem.ctrMode !== KeyMode.IGNORED) {
+			response = response && this.ctrMode == templateEventItem.ctrMode;
+		}
+		if (templateEventItem.shiftMode !== KeyMode.IGNORED) {
+			response = response && this.shiftMode == templateEventItem.shiftMode;
+		}
+		if (templateEventItem.altMode !== KeyMode.IGNORED) {
+			response = response && this.altMode == templateEventItem.altMode;
+		}
+		if (templateEventItem.numlockMode !== KeyMode.IGNORED) {
+			response = response && this.numlockMode == templateEventItem.numlockMode;
+		}
+		return response;
+	}
 }
 
+enum KeyboardKey {
+	b = "b",
+	i = "i",
+	u = "u",
+	s = "s",
+	o = "o",
+	v = "v",
+	x = "x",
+	z = "z",
+	Control = "Control",
+	Shift = "Shift",
+	Alt = "Alt",
+	ScrollLock = "ScrollLock",
+	Meta = "Meta",
+	ContextMenu = "ContextMenu",
+	NumLock = "NumLock",
+	PageUp = "PageUp",
+	PageDown = "PageDown",
+	Clear = "Clear",
+	Insert = "Insert",
+	Pause = "Pause",
+	Tab = "Tab",
+	CapsLock = "CapsLock",
+	ArrowLeft = "ArrowLeft",
+	ArrowRight = "ArrowRight",
+	ArrowUp = "ArrowUp",
+	ArrowDown = "ArrowDown",
+	End = "End",
+	Home = "Home",
+	F1 = "F1",
+	F2 = "F2",
+	F3 = "F3",
+	F4 = "F4",
+	F5 = "F5",
+	F6 = "F6",
+	F7 = "F7",
+	F8 = "F8",
+	F9 = "F9",
+	F10 = "F10",
+	F11 = "F11",
+	F12 = "F12",
+	Delete = "Delete",
+	Backspace = "Backspace",
+	BracketOpen = "(",
+	BracketClose = ")",
+	Add = "+",
+	Subtract = "-",
+	Divide = "/",
+	Multiply = "*",
+	Greater = ">",
+	Less = "<",
+	Equal = "=",
+	Not = "!",
+}
+
+
+class KeyManager {
+	private _deniedKeys: KeyItem[] = [
+		new KeyItem(KeyboardKey.b, KeyMode.ENABLED),
+		new KeyItem(KeyboardKey.i, KeyMode.ENABLED),
+		new KeyItem(KeyboardKey.u, KeyMode.ENABLED),
+		new KeyItem(KeyboardKey.z, KeyMode.ENABLED),
+		new KeyItem(KeyboardKey.Control),
+		new KeyItem(KeyboardKey.Shift),
+		new KeyItem(KeyboardKey.Alt),
+		new KeyItem(KeyboardKey.ScrollLock),
+		new KeyItem(KeyboardKey.Meta),
+		new KeyItem(KeyboardKey.ContextMenu),
+		new KeyItem(KeyboardKey.NumLock),
+		new KeyItem(KeyboardKey.PageUp),
+		new KeyItem(KeyboardKey.PageDown),
+		new KeyItem(KeyboardKey.Insert),
+		new KeyItem(KeyboardKey.ScrollLock),
+		new KeyItem(KeyboardKey.Pause),
+		new KeyItem(KeyboardKey.Tab),
+		new KeyItem(KeyboardKey.CapsLock),
+
+		new KeyItem(KeyboardKey.o, KeyMode.ENABLED),
+		new KeyItem(KeyboardKey.s, KeyMode.ENABLED),
+		new KeyItem(KeyboardKey.x, KeyMode.ENABLED),
+		new KeyItem(KeyboardKey.v, KeyMode.ENABLED),
+	];
+
+	private _moveKeys: KeyItem[] = [
+		new KeyItem(KeyboardKey.ArrowLeft),
+		new KeyItem(KeyboardKey.ArrowRight),
+		new KeyItem(KeyboardKey.ArrowUp),
+		new KeyItem(KeyboardKey.ArrowDown),
+		new KeyItem(KeyboardKey.End),
+		new KeyItem(KeyboardKey.Home),
+	];
+
+	private _fKeys: KeyItem[] = [
+		new KeyItem(KeyboardKey.F1),
+		new KeyItem(KeyboardKey.F2),
+		new KeyItem(KeyboardKey.F3),
+		new KeyItem(KeyboardKey.F4),
+		new KeyItem(KeyboardKey.F5),
+		new KeyItem(KeyboardKey.F6),
+		new KeyItem(KeyboardKey.F7),
+		new KeyItem(KeyboardKey.F8),
+		new KeyItem(KeyboardKey.F9),
+		new KeyItem(KeyboardKey.F10),
+		new KeyItem(KeyboardKey.F11),
+		new KeyItem(KeyboardKey.F12),
+	];
+
+	private _removedKeys: KeyItem[] = [
+		new KeyItem(KeyboardKey.Delete),
+		new KeyItem(KeyboardKey.Backspace)
+	];
+
+	private _bracketKeys: KeyItem[] = [
+		new KeyItem(KeyboardKey.BracketOpen),
+		new KeyItem(KeyboardKey.BracketClose)
+	];
+
+	private _mathKeys: KeyItem[] = [
+		new KeyItem(KeyboardKey.Add),
+		new KeyItem(KeyboardKey.Subtract),
+		new KeyItem(KeyboardKey.Multiply),
+		new KeyItem(KeyboardKey.Divide),
+	];
+
+	private _conditionKeys: KeyItem[] = [
+		new KeyItem(KeyboardKey.Greater),
+		new KeyItem(KeyboardKey.Less),
+		new KeyItem(KeyboardKey.Equal),
+		new KeyItem(KeyboardKey.Not),
+	];
+
+	private has(keyItem: KeyItem, list: KeyItem[]): boolean {
+		return list.filter(x=>keyItem.equal(x)).length > 0;
+	}
+
+	public isDeniedKey(keyItem: KeyItem): boolean {
+		return this.has(keyItem, this._deniedKeys);
+	}
+
+	public isMoveKey(keyItem: KeyItem): boolean {
+		return this.has(keyItem, this._moveKeys);
+	}
+
+	public isFKey(keyItem: KeyItem): boolean {
+		return this.has(keyItem, this._fKeys);
+	}
+
+	public isRemoveKey(keyItem: KeyItem): boolean {
+		return this.has(keyItem, this._removedKeys);
+	}
+
+	public isChangelessKey(keyItem: KeyItem): boolean {
+		return this.isMoveKey(keyItem) || this.isFKey(keyItem);
+	}
+
+	public isMathKey(keyItem: KeyItem): boolean {
+		return this.has(keyItem, this._mathKeys);
+	}
+
+	public isBracketKey(keyItem: KeyItem): boolean {
+		return this.has(keyItem, this._bracketKeys);
+	}
+
+	public isConditionKey(keyItem: KeyItem): boolean {
+		return this.has(keyItem, this._conditionKeys);
+	}
+
+	public isSingleOperationKey(keyItem: KeyItem): boolean {
+		return this.isMathKey(keyItem) ||
+			this.isBracketKey(keyItem) ||
+			this.isConditionKey(keyItem);
+	}
+}
+
+class KeyboardKeyProcessor {
+	private _formulaManager: FormulaManager;
+	private _caretIndex: number;
+	
+	public get caretIndex(): number {
+		return this._caretIndex;
+	}
+
+	public set caretIndex(value: number) {
+		this._caretIndex = value;
+	}
+
+	constructor(formulaManager: FormulaManager) {
+		this._caretIndex = 0;
+		this._formulaManager = formulaManager;
+	}
+
+	public processMoveCaretOpertion(keyItem: KeyItem): void {
+		if (keyItem.key === KeyboardKey.ArrowLeft) {
+			this.caretIndex = Math.max(this.caretIndex - 1, 0);
+		} else if (keyItem.key === KeyboardKey.ArrowRight) {
+			this.caretIndex = Math.min(this.caretIndex + 1, this._formulaManager.getTotalContentLength());
+		} else if (keyItem.key === KeyboardKey.End) {
+			this.caretIndex = this._formulaManager.getTotalContentLength();
+		} else if (keyItem.key === KeyboardKey.Home) {
+			this.caretIndex = 0;
+		}
+	}
+
+	public processRemoveOpertion(keyItem: KeyItem): void {
+		var formulaElement: FormulaElement | null = this._formulaManager.getCurrentElement(this.caretIndex);
+		if (formulaElement == null) {
+			return;
+		}
+		if (keyItem.key === KeyboardKey.Backspace) {
+			formulaElement = this._processRemoveByBackspaceOpertion(formulaElement);
+		} else if (keyItem.key === KeyboardKey.Delete) {
+			formulaElement = this._processRemoveByDeleteOpertion(formulaElement);
+		}
+		if (formulaElement != null && formulaElement.isEmpty()) {
+			this._formulaManager.tryJoinElements(this._formulaManager.getPrevElement(formulaElement), this._formulaManager.getNextElement(formulaElement))
+		}
+	}
+
+	private _processRemoveByBackspaceOpertion(element: FormulaElement): FormulaElement | null {
+		let formulaElement: FormulaElement | null = element;
+		if (this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex) <= 0) {
+			formulaElement = this._formulaManager.getPrevElement(formulaElement);
+		}
+		if (formulaElement != null && formulaElement.removeByBackspace(this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex))) {
+			this.caretIndex--;
+		}
+		return formulaElement;
+	}
+
+	private _processRemoveByDeleteOpertion(element: FormulaElement): FormulaElement | null {
+		let formulaElement: FormulaElement | null = element;
+		if (this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex) >= formulaElement.contentLength) {
+			formulaElement = this._formulaManager.getNextElement(formulaElement);
+		}
+		if (formulaElement != null && formulaElement.removeByDelete(this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex))) {
+		}
+		return formulaElement;
+	}
+
+	public processCommonOpertion(keyItem: KeyItem): void {
+		var formulaElement = this._getEditableElement();
+		var formulaElementCaretIndex = this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
+		if (keyItem.key === '"' && formulaElement.isEmpty() && (formulaElement.type === FormulaElementType.UNSETTED || (formulaElement.type === FormulaElementType.CONSTANT && (formulaElement.dataValueType === DataValueType.UNSETTED || formulaElement.dataValueType === DataValueType.TEXT)))) {
+			formulaElement.insertAt('""', formulaElementCaretIndex);
+		} else {
+			formulaElement.insertAt(keyItem.key, formulaElementCaretIndex);
+		}
+		
+		this.caretIndex += keyItem.key.length;
+	}
+
+	public processSingleOpertion(keyItem: KeyItem): void {
+		var operationFormulaElement = this._formulaManager.generateSingleOperationFormulaElement(keyItem.key);
+		var formulaElement = this._formulaManager.forceGetCurrentElement(this.caretIndex);
+		var innerCaretIndex = this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex)
+		if (innerCaretIndex === 0) {
+			this._formulaManager.insertBefore(operationFormulaElement, formulaElement);
+		} else if (innerCaretIndex >= formulaElement.contentLength) {
+			this._formulaManager.insertAfter(operationFormulaElement, formulaElement);
+		} else {
+			this._formulaManager.insertAfter(operationFormulaElement, formulaElement);
+			var rightFormulaElement = formulaElement.split(innerCaretIndex);
+			if (rightFormulaElement != null) {
+				this._formulaManager.insertAfter(rightFormulaElement, operationFormulaElement);
+			}
+		}
+		this.caretIndex += keyItem.key.length;
+	}
+
+	private _getEditableElement(): FormulaElement {
+		var formulaElement = this._formulaManager.forceGetCurrentElement(this.caretIndex);
+		if (formulaElement.type === FormulaElementType.SINGLEOPERATION) {
+			var nextFormulaElement = this._formulaManager.getNextElement(formulaElement);
+			if (nextFormulaElement == null || nextFormulaElement.type === FormulaElementType.SINGLEOPERATION) {
+				nextFormulaElement = this._formulaManager.generateEmptyFormulaElement();
+				this._formulaManager.insertAfter(nextFormulaElement, formulaElement);
+			}
+			formulaElement = nextFormulaElement;
+		}
+		return formulaElement;
+	}
+}
+
+class KeyboardProcessor {
+	private _events: KeyboardEvent[];
+	private _inProcess: boolean;
+	private _handlerFn: Function;
+	private _formulaManager: FormulaManager;
+	private _keyManager: KeyManager;
+	private _keyboardKeyProcessor: KeyboardKeyProcessor;
+
+	constructor() {
+		this._events = [];
+		this._inProcess = false;
+		this._handlerFn = this._emptyHandler;
+		this._formulaManager = new FormulaManager();
+		this._keyManager = new KeyManager();
+		this._keyboardKeyProcessor = new KeyboardKeyProcessor(this._formulaManager)
+	}
+
+	isEmpty(value: any): boolean {
+		return value === null || value === undefined || value === '' || (Array.isArray(value) && !value.length);
+	}
+
+	public getFormulaManager(): FormulaManager {
+		return this._formulaManager;
+	}
+
+	private _emptyHandler() {}
+
+	private _dispatchNextEvent(iterator: number = 0) {
+		if (this._inProcess) {
+			return;
+		}
+		if (!this._events.length) {
+			this._invokeHendler();
+			return;
+		}
+		this._inProcess = true;
+		var event = this._events.shift();
+		if (event != null && event != undefined) {
+			if (iterator === 0) {
+				this._keyboardKeyProcessor.caretIndex = this._getCaretIndex(event.currentTarget);
+			}
+			if (this._dispatchEvent(event)) {
+				event.preventDefault();
+				event.stopPropagation();
+			}
+			this._formulaManager.removeEmptyElements();
+		}
+		this._inProcess = false;
+		this._dispatchNextEvent(iterator + 1);
+	}
+
+	private _getCaretIndex(element: any, withUnSelect: boolean = true): number {
+		let position = 0;
+		const isSupported = typeof window.getSelection !== "undefined";
+		if (isSupported) {
+			const selection = window.getSelection();
+			if (selection && selection.rangeCount !== 0) {
+				const range = selection.getRangeAt(0);
+				const preCaretRange = range.cloneRange();
+				preCaretRange.selectNodeContents(element);
+				preCaretRange.setEnd(range.endContainer, range.endOffset);
+				position = preCaretRange.toString().length;
+			} else {
+				position = this._keyboardKeyProcessor.caretIndex;
+			}
+		} else {
+			position = this._keyboardKeyProcessor.caretIndex;
+		}
+		if (withUnSelect) {
+			var selection = window.getSelection();
+			if (selection != null) {
+				selection.removeAllRanges();
+			}
+		}
+		return position;
+	}
+
+	private _dispatchEvent(event: KeyboardEvent): boolean {
+		const keyItem: KeyItem = KeyItem.fromKeyboardEvent(event);
+		if (this._keyManager.isDeniedKey(keyItem)) {
+			return true;
+		} else if (this._keyManager.isRemoveKey(keyItem)) {
+			this._keyboardKeyProcessor.processRemoveOpertion(keyItem);
+		} else if (this._keyManager.isChangelessKey(keyItem)) {
+			this._keyboardKeyProcessor.processMoveCaretOpertion(keyItem);
+		} else if (this._keyManager.isSingleOperationKey(keyItem)) {
+			this._keyboardKeyProcessor.processSingleOpertion(keyItem);
+		} else {
+			this._keyboardKeyProcessor.processCommonOpertion(keyItem);
+		}
+		return true;
+	}
+
+	private _invokeHendler() {
+		this._formulaManager.actualizeFormulaElementsDataValueType();
+		var caretIndex: number = this._keyboardKeyProcessor.caretIndex;
+		var elementPosition = 0;
+		var elementCaretIndex = 0;
+		var formulaElement = this._formulaManager.getCurrentElement(caretIndex);
+		if (formulaElement != null) {
+			elementPosition = this._formulaManager.getElementPosition(formulaElement);
+			elementCaretIndex = this._formulaManager.getFormulaElementCaretIndex(formulaElement, caretIndex);
+			var prevFormulaElement = this._formulaManager.getPrevElement(formulaElement);
+			if (elementCaretIndex < 0 && prevFormulaElement != null) {
+				elementPosition = this._formulaManager.getElementPosition(formulaElement);
+				formulaElement = prevFormulaElement;
+				elementCaretIndex =  this._formulaManager.getFormulaElementCaretIndex(formulaElement, caretIndex);
+			}
+		}
+
+		this._handlerFn({
+			"elementIndex": elementPosition,
+			"elementCaretIndex": elementCaretIndex,
+			"displayList": this._formulaManager.generateFormulaDisplayElementList()
+		});
+	}
+
+	public subscribe(fn: Function) {
+		this._handlerFn = fn;
+	}
+
+	public register(event: KeyboardEvent): void {
+		this._events.push(event);
+		this._dispatchNextEvent();
+	}
+}
+
+interface IKeyboardProcessorResponse {
+	elementIndex: number;
+	elementCaretIndex: number;
+	displayList: FormulaDisplayElement[]
+}
 
 
 @Component({
@@ -362,287 +831,43 @@ export class ITFormulaEditorComponent implements OnInit {
 	cursorX: number;
 	cursorY: number;
 
-	private deniedKeys: KeyCodeItem[] = [
-		new KeyCodeItem("KeyB", KeyMode.ENABLED),
-		new KeyCodeItem("KeyI", KeyMode.ENABLED),
-		new KeyCodeItem("KeyU", KeyMode.ENABLED),
-		new KeyCodeItem("KeyZ", KeyMode.ENABLED),
-		new KeyCodeItem("Shift"),
-		new KeyCodeItem("ShiftLeft"),
-		new KeyCodeItem("ShiftRight"),
-		new KeyCodeItem("Control"),
-		new KeyCodeItem("ControlLeft"),
-		new KeyCodeItem("ControlRight"),
-		new KeyCodeItem("Alt"),
-		new KeyCodeItem("AltLeft"),
-		new KeyCodeItem("AltRight"),
-		new KeyCodeItem("Meta"),
-		new KeyCodeItem("MetaLeft"),
-		new KeyCodeItem("MetaRight"),
-		new KeyCodeItem("ContextMenu"),
-		new KeyCodeItem("NumLock"),
-		new KeyCodeItem("PageDown"),
-		new KeyCodeItem("PageUp"),
-		new KeyCodeItem("Numpad5", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), //Clear
-		new KeyCodeItem("Numpad9", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), //PageUp
-		new KeyCodeItem("Numpad3", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), //PageUp
-		new KeyCodeItem("Insert"),
-		new KeyCodeItem("ScrollLock"),
-		new KeyCodeItem("Pause"),
-		new KeyCodeItem("KeyO", KeyMode.ENABLED),
-		new KeyCodeItem("KeyS", KeyMode.ENABLED),
-		new KeyCodeItem("KeyV", KeyMode.ENABLED),
-		new KeyCodeItem("Tab"),
-		new KeyCodeItem("CapsLock"),
-		
-		
-	];
-
-	private changelessKeys: KeyCodeItem[] = [
-		new KeyCodeItem("ArrowRight"),
-		new KeyCodeItem("ArrowLeft"),
-		new KeyCodeItem("ArrowUp"),
-		new KeyCodeItem("ArrowDown"),
-		new KeyCodeItem("End"),
-		new KeyCodeItem("Home"),
-
-		new KeyCodeItem("Numpad6", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // ArrowRight
-		new KeyCodeItem("Numpad4", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // ArrowLeft
-		new KeyCodeItem("Numpad8", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // ArrowUp
-		new KeyCodeItem("Numpad2", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // ArrowDown
-		new KeyCodeItem("Numpad1", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // End
-		new KeyCodeItem("Numpad7", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // Home
-		
-		new KeyCodeItem("F1"),
-		new KeyCodeItem("F2"),
-		new KeyCodeItem("F3"),
-		new KeyCodeItem("F4"),
-		new KeyCodeItem("F5"),
-		new KeyCodeItem("F6"),
-		new KeyCodeItem("F7"),
-		new KeyCodeItem("F8"),
-		new KeyCodeItem("F9"),
-		new KeyCodeItem("F10"),
-		new KeyCodeItem("F11"),
-		new KeyCodeItem("F12"),
-		
-		
-		
-	];
-
-	private removedKeys: KeyCodeItem[] = [
-		new KeyCodeItem("Backspace"),
-		new KeyCodeItem("Delete")
-	];
-
-	private singleOperators: KeyCodeItem[] = [
-		new KeyCodeItem("Equal", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.ENABLED), // +
-		new KeyCodeItem("NumpadAdd"), // +
-		new KeyCodeItem("Minus", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // -
-		new KeyCodeItem("NumpadSubtract"), // -
-		new KeyCodeItem("Digit9", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.ENABLED), // (
-		new KeyCodeItem("Digit0",  KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.ENABLED), // )
-		new KeyCodeItem("Slash", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // /
-		new KeyCodeItem("NumpadDivide"), // /
-		new KeyCodeItem("NumpadMultiply"), // *
-		new KeyCodeItem("Period",  KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.ENABLED), // >
-		new KeyCodeItem("Comma",  KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.ENABLED), // <
-		new KeyCodeItem("Equal", KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.DISABLED), // =
-		new KeyCodeItem("Digit1",  KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.ENABLED), // !
-	];
 
 	private previousFormulaContent: string = '';
 	
 	formulaDisplayElements: FormulaDisplayElement[];
-	formulaManager: FormulaManager;
+
+	private _keyboardProcessor: KeyboardProcessor;
 
 	constructor() { 
 		this.cursorIndex = 0;
 		this.caretIndex = 0;
 		this.cursorX = 0;
 		this.cursorY = 0;
-		this.formulaManager = new FormulaManager();
+		this._keyboardProcessor = this._initKeyboardProcessor();
 		this.formulaDisplayElements = [];
-		this.updateVisualizatorContent();
+	}
+
+	_initKeyboardProcessor(): KeyboardProcessor {
+		var keyboardProcessor = new KeyboardProcessor();
+		keyboardProcessor.subscribe((item: IKeyboardProcessorResponse) => {
+			this.formulaDisplayElements = item.displayList;
+			setTimeout(()=>{
+				this.updateCaretPosition(item.elementIndex, item.elementCaretIndex);
+				this.elementsLog.nativeElement.innerHTML = this._keyboardProcessor.getFormulaManager().getSerializedElements();
+			}, 4);
+		});
+		return keyboardProcessor;
 	}
 
 	ngOnInit(): void {
 	}
 
-	updateVisualizatorContent(): void {
-		this.formulaDisplayElements = this.formulaManager.generateFormulaDisplayElementList();
-	}
-
 	onKeyDown(event: KeyboardEvent): void {
-		this.caretIndex = this.getCaretIndex(event.currentTarget);
-		this.backupFormulaContent();
-		if (this.containKeyInCollection(this.deniedKeys, event)) {
-			event.preventDefault();
-			event.stopPropagation();
-			return;
-		}
-		var selection = window.getSelection();
-		if (selection != null) {
-			selection.removeAllRanges();
-		}
-		
-		if (this.containKeyInCollection(this.changelessKeys, event)) {
-			if (this.processChangelessOperation(event)) {
-				event.preventDefault();
-				event.stopPropagation();
-			}
-		} else if (this.containKeyInCollection(this.removedKeys, event)) {
-			this.processRemoveOperation(event);
-		} else if (this.containKeyInCollection(this.singleOperators, event)) {
-			this.processSingleOperation(event);
-		} else {
-			this.processCommonOperation(event);
-		}
-		
-		this.formulaManager.removeEmptyElements();
-		this.formulaManager.actualizeFormulaElementsDataValueType();
-		this.updateVisualizatorContent();
-		this.finalizedWork();
-		
+		this._keyboardProcessor.register(event);
 	}
 
 	isEmpty(value: any): boolean {
 		return value === null || value === undefined || value === '' || (Array.isArray(value) && !value.length);
-	}
-
-	processCommonOperation(event: KeyboardEvent): void {
-		var formulaElement = this.formulaManager.getCurrentElement(this.caretIndex);
-		if (this.isEmpty(formulaElement)) {
-			formulaElement = this.generateEmptyFormulaElement();
-			this.formulaManager.add(formulaElement);
-		}
-		if (formulaElement.type === FormulaElementType.SINGLEOPERATION) {
-			var nextFormulaElement = this.formulaManager.getNextElement(formulaElement);
-			if (nextFormulaElement == null || nextFormulaElement.type === FormulaElementType.SINGLEOPERATION) {
-				nextFormulaElement = this.generateEmptyFormulaElement();
-				this.formulaManager.insertAfter(nextFormulaElement, formulaElement);
-			}
-			formulaElement = nextFormulaElement;
-		}
-		var formulaElementCaretIndex = this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
-		if (event.key === '"' && formulaElement.isEmpty() && (formulaElement.type === FormulaElementType.UNSETTED || (formulaElement.type === FormulaElementType.CONSTANT && (formulaElement.dataValueType === DataValueType.UNSETTED || formulaElement.dataValueType === DataValueType.TEXT)))) {
-			formulaElement.insertAt('""', formulaElementCaretIndex);
-		} else {
-			formulaElement.insertAt(event.key, formulaElementCaretIndex);
-		}
-		
-		this.caretIndex += event.key.length;
-	}
-
-	processChangelessOperation(event: KeyboardEvent): boolean {
-		if (event.key === "ArrowLeft") {
-			this.caretIndex = Math.max(this.caretIndex - 1, 0);
-			return true;
-		}
-		if (event.key === "ArrowRight") {
-			this.caretIndex = Math.min(this.caretIndex + 1, this.getTotalContentLength());
-			return true;
-		}
-		if (event.key === "End") {
-			this.caretIndex = this.getTotalContentLength();
-			return true;
-		}
-		if (event.key === "Home") {
-			this.caretIndex = 0;
-			return true;
-		}
-		return false;
-	}
-
-	getTotalContentLength(): number {
-		return this.visualizator.nativeElement.innerText.length;
-	}
-
-	processRemoveOperation(event: KeyboardEvent): void {
-		var formulaElement: FormulaElement | null = this.formulaManager.getCurrentElement(this.caretIndex);
-		if (formulaElement == null) {
-			return;
-		}
-		if (event.code === "Backspace") {
-			if (this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex) <= 0) {
-				formulaElement = this.formulaManager.getPrevElement(formulaElement);
-			}
-			if (formulaElement != null && formulaElement.removeByBackspace(this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex))) {
-				this.caretIndex--;
-			}
-		} else if (event.code === "Delete") {
-			if (this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex) >= formulaElement.contentLength) {
-				formulaElement = this.formulaManager.getNextElement(formulaElement);
-			}
-			if (formulaElement != null && formulaElement.removeByDelete(this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex))) {
-			}
-		}
-		if (formulaElement != null && formulaElement.isEmpty()) {
-			this.formulaManager.tryJoinElements(this.formulaManager.getPrevElement(formulaElement), this.formulaManager.getNextElement(formulaElement))
-		}
-	}
-
-	processSingleOperation(event: KeyboardEvent): void {
-		var operationFormulaElement = this.generateSingleOperationFormulaElement(event.key);
-
-		var formulaElement = this.formulaManager.getCurrentElement(this.caretIndex);
-		if (formulaElement === null || formulaElement === undefined) {
-			formulaElement = this.generateEmptyFormulaElement();
-			this.formulaManager.add(formulaElement);
-		}
-		var innerCaretIndex = this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex)
-		if (innerCaretIndex === 0) {
-			this.formulaManager.insertBefore(operationFormulaElement, formulaElement);
-		} else if (innerCaretIndex >= formulaElement.contentLength) {
-			this.formulaManager.insertAfter(operationFormulaElement, formulaElement);
-		} else {
-			this.formulaManager.insertAfter(operationFormulaElement, formulaElement);
-			var rightFormulaElement = formulaElement.split(innerCaretIndex);
-			if (rightFormulaElement != null) {
-				this.formulaManager.insertAfter(rightFormulaElement, operationFormulaElement);
-			}
-		}
-		this.caretIndex++;
-	}
-
-	containKeyInCollection(collection:KeyCodeItem[], event: KeyboardEvent) {
-		var filtered = collection.filter((item) => this.equalKeyCode(event, item));
-		return filtered.length;
-	}
-
-	equalKeyCode(event: KeyboardEvent, keyCode: KeyCodeItem) {
-		var response = event.code === keyCode.code;
-		if (keyCode.ctrMode !== KeyMode.IGNORED) {
-			response = response && (keyCode.ctrMode === KeyMode.ENABLED && event.ctrlKey || keyCode.ctrMode === KeyMode.DISABLED && !event.ctrlKey);
-		}
-		if (keyCode.shiftMode !== KeyMode.IGNORED) {
-			response = response && (keyCode.shiftMode === KeyMode.ENABLED && event.shiftKey || keyCode.shiftMode === KeyMode.DISABLED && !event.shiftKey);
-		}
-		if (keyCode.altMode !== KeyMode.IGNORED) {
-			response = response && (keyCode.altMode === KeyMode.ENABLED && event.altKey || keyCode.altMode === KeyMode.DISABLED && !event.altKey);
-		}
-		if (keyCode.numlockMode !== KeyMode.IGNORED) {
-			response = response && (keyCode.numlockMode === KeyMode.ENABLED && event.getModifierState("NumLock") || keyCode.numlockMode === KeyMode.DISABLED && !event.getModifierState("NumLock"));
-		}
-		return response;
-	}
-
-	equalKeyCodeMode(eventModeEnabled: boolean, keyMode: KeyMode) {
-		return keyMode !== KeyMode.IGNORED && keyMode === KeyMode.ENABLED && eventModeEnabled;
-	}
-
-	generateEmptyFormulaElement(): FormulaElement {
-		var element = new FormulaElement();
-		element.type = FormulaElementType.UNSETTED;
-		element.content = '';
-		return element;
-	}
-
-	generateSingleOperationFormulaElement(operation: string): FormulaElement {
-		var element = new FormulaElement();
-		element.type = FormulaElementType.SINGLEOPERATION;
-		element.content = operation;
-		return element;
 	}
 
 	backupFormulaContent(): void {
@@ -655,34 +880,16 @@ export class ITFormulaEditorComponent implements OnInit {
 	}
 
 	onKeyUp(event: KeyboardEvent): void {
-		this.updateCaretPosition();
-		this.elementsLog.nativeElement.innerHTML = this.formulaManager.getSerializedElements();
-		this.updateCursorPosition(event.currentTarget);
+		
 	}
 
-	updateCaretPosition(): void {
-		var elementPosition = 0;
-		var formulaElementCursorPosition = 0;
-		var formulaElement = this.formulaManager.getCurrentElement(this.caretIndex);
-		if (formulaElement != null) {
-			elementPosition = this.formulaManager.getElementPosition(formulaElement);
-			formulaElementCursorPosition = this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
-			var prevFormulaElement = this.formulaManager.getPrevElement(formulaElement);
-			if (formulaElementCursorPosition < 0 && prevFormulaElement != null) {
-				elementPosition = this.formulaManager.getElementPosition(formulaElement);
-				formulaElement = prevFormulaElement;
-				formulaElementCursorPosition =  this.formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
-			}
-		}
-		
-
+	updateCaretPosition(elementIndex: number, elementCaretIndex: number): void {
 		var el = this.visualizator.nativeElement;
 		var sel = window.getSelection();
-		
 		var range = document.createRange()
-		var startWrap = el.childNodes[elementPosition] || el;
+		var startWrap = el.childNodes[elementIndex] || el;
 		var startEl = startWrap.childNodes[0] || startWrap;
-		range.setStart(startEl, formulaElementCursorPosition)
+		range.setStart(startEl, elementCaretIndex)
 		range.collapse(true)
 		if (sel != null) {
 			sel.removeAllRanges();
@@ -696,7 +903,6 @@ export class ITFormulaEditorComponent implements OnInit {
 		this.cursorY = coords.y;
 		this.cursorIndex = this.caretIndex;
 	}
-
 
 	onPaste(event: any): void {
 		event.preventDefault();
@@ -764,4 +970,3 @@ export class ITFormulaEditorComponent implements OnInit {
 		return { x, y };
 	}
 }
-
