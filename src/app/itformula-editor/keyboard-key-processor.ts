@@ -1,7 +1,8 @@
 import { DataValueType } from "./enums";
 import { FormulaElement, FormulaElementType, FormulaManager } from "./formula-construction";
 import { KeyboardKey, KeyItem, KeyManager } from "./key-construction";
-import { IExtendColumnResponse, KeyboardProcessEvent } from "./keyboard-processor";
+import { ICommandOperationResponse, IExtendColumnResponse, KeyboardProcessEvent } from "./keyboard-processor";
+import { FormulaUtilities } from "./utils";
 
 export class KeyboardKeyProcessor {
 	private _formulaManager: FormulaManager;
@@ -78,7 +79,11 @@ export class KeyboardKeyProcessor {
 		var currentElement = this._formulaManager.getCurrentElement(this.caretIndex);
 		var formulaElement = this._getEditableElement();
 		if (currentElement !== formulaElement) {
-			this.caretIndex =  this._formulaManager.getActualFormulaElementCaretIndex(formulaElement, 0);
+			var innerCaretIndex = this._formulaManager.getElementPosition(formulaElement) < this._formulaManager.getElementPosition(currentElement)
+				? formulaElement.contentLength
+				: 0;
+			this.caretIndex =  this._formulaManager.getActualFormulaElementCaretIndex(formulaElement, innerCaretIndex);
+			
 		}
 		var formulaElementCaretIndex = this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
 		var prevFormulaElement = this._formulaManager.getPrevElement(formulaElement);
@@ -123,15 +128,24 @@ export class KeyboardKeyProcessor {
 	}
 
 	public processCommandOpertion(keyItem: KeyItem): void {
-		this._callHandler(KeyboardProcessEvent.COMMAND, null, (commandFormulaElement: FormulaElement) => {
+		this._callHandler(KeyboardProcessEvent.COMMAND, null, (response: ICommandOperationResponse) => {
 			var formulaElement = this._formulaManager.getCurrentElement(this.caretIndex);
 			var innerCaretIndex = this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
-			if (formulaElement.IsFirstCaretIndex(innerCaretIndex)) {
-				this._formulaManager.insertBefore(commandFormulaElement, formulaElement);
-			} else {
-				this._formulaManager.insertAfter(commandFormulaElement, formulaElement);
+			if (!FormulaUtilities.isEmpty(response.items)) {
+				var contentShift: number = 0;
+				if (formulaElement.IsFirstCaretIndex(innerCaretIndex)) {
+					response.items.forEach((item: FormulaElement) => {
+						contentShift += item.contentLength;
+						this._formulaManager.insertBefore(item, formulaElement);
+					});
+				} else {
+					response.items.reverse().forEach((item: FormulaElement) => {
+						contentShift += item.contentLength;
+						this._formulaManager.insertAfter(item, formulaElement);
+					});
+				}
+				this.caretIndex += response.caretIndexShift ?? contentShift;
 			}
-			this.caretIndex += commandFormulaElement.contentLength;
 		});
 	}
 

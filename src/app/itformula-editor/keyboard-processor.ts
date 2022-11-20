@@ -1,5 +1,5 @@
 import { DataValueType } from "./enums";
-import { FormulaDisplayElement, FormulaManager } from "./formula-construction";
+import { FormulaDisplayElement, FormulaElement, FormulaManager } from "./formula-construction";
 import { KeyboardKeyProcessor } from "./keyboard-key-processor";
 
 
@@ -19,6 +19,11 @@ export interface IExtendColumnResponse {
 	content: string;
 	metaPath: string;
 	dataValueType: DataValueType
+}
+
+export interface ICommandOperationResponse {
+	items: FormulaElement[],
+	caretIndexShift?: number;
 }
 
 export class KeyboardProcessor {

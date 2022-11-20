@@ -1,10 +1,13 @@
+import { Data } from "@angular/router";
 import { DataValueType } from "./enums";
+import { KeyboardKey } from "./key-construction";
 
 export enum FormulaElementType {
 	UNSETTED,
 	CONSTANT,
 	SINGLEOPERATION,
-	COLUMN
+	COLUMN,
+	FUNCTION
 }
 
 export class FormulaDisplayElement {
@@ -22,6 +25,8 @@ export class FormulaDisplayElement {
 		switch (this.type) {
 			case FormulaElementType.COLUMN:
 				return "dvt-column";
+			case FormulaElementType.COLUMN:
+				return "dvt-function";
 		}
 		switch (this.dataValueType) {
 			case DataValueType.FLOAT:
@@ -35,11 +40,27 @@ export class FormulaDisplayElement {
 	}
 }
 
+export class FormulaElementArgument {
+	name: string;
+	dataValueType: DataValueType;
+	description: string;
+	isRequired: boolean;
+
+	constructor(name: string, dataValueType: DataValueType, isRequired: boolean = true) {
+		this.name = name;
+		this.dataValueType = dataValueType;
+		this.isRequired = isRequired;
+		this.description = "";
+	}
+
+}
+
 export class FormulaElement {
-	private _type: FormulaElementType = FormulaElementType.UNSETTED;
-	private _dataValueType: DataValueType = DataValueType.UNSETTED;
-	private _content: string = '';
-	private _metaPath: string = '';
+	private _type: FormulaElementType;
+	private _dataValueType: DataValueType;
+	private _content: string;
+	private _metaPath: string;
+	private _arguments: FormulaElementArgument[]
 
 	public get content() {
 		return this._content;
@@ -77,8 +98,24 @@ export class FormulaElement {
 		}
 	}
 
+	public get arguments(): FormulaElementArgument[] {
+		return this._arguments;
+	}
+
+	public set arguments(functionArguments: FormulaElementArgument[]) {
+		this._arguments = functionArguments;
+	}
+
 	public get contentLength(): number {
 		return this.content.length;
+	}
+
+	constructor() {
+		this._type = FormulaElementType.UNSETTED;
+		this._dataValueType = DataValueType.UNSETTED;
+		this._content = "";
+		this._metaPath = "";
+		this._arguments = [];
 	}
 
 	public generateDisplayElement(): FormulaDisplayElement {
@@ -89,6 +126,9 @@ export class FormulaElement {
 		if (this.type === FormulaElementType.COLUMN) {
 			return false;
 		}
+		if (this.type === FormulaElementType.FUNCTION) {
+			return false;
+		}
 		if (this.type === FormulaElementType.SINGLEOPERATION) {
 			return false;
 		}
@@ -97,6 +137,9 @@ export class FormulaElement {
 
 	public canChangeDataValueType(): boolean {
 		if (this.type === FormulaElementType.SINGLEOPERATION) {
+			return false;
+		}
+		if (this.type === FormulaElementType.FUNCTION) {
 			return false;
 		}
 		if (this.type === FormulaElementType.COLUMN) {
@@ -156,6 +199,9 @@ export class FormulaElement {
 		if (this.type === FormulaElementType.SINGLEOPERATION) {
 			return false;
 		}
+		if (this.type === FormulaElementType.FUNCTION) {
+			return false;
+		}
 		if (this.type === FormulaElementType.COLUMN) {
 			return false;
 		}
@@ -174,7 +220,13 @@ export class FormulaElement {
 		if (!source) {
 			return false;
 		}
-		if (source.type === FormulaElementType.SINGLEOPERATION) {
+		if (source.type === FormulaElementType.SINGLEOPERATION || this.type === FormulaElementType.SINGLEOPERATION) {
+			return false;
+		}
+		if (source.type === FormulaElementType.FUNCTION || this.type === FormulaElementType.FUNCTION) {
+			return false;
+		}
+		if (source.type === FormulaElementType.COLUMN || this.type === FormulaElementType.COLUMN) {
 			return false;
 		}
 		this.content += source.content;
@@ -195,6 +247,9 @@ export class FormulaElement {
 
 	public canKeyEdit(): boolean {
 		if (this.type === FormulaElementType.COLUMN) {
+			return false;
+		}
+		if (this.type === FormulaElementType.FUNCTION) {
 			return false;
 		}
 		if (this.type === FormulaElementType.SINGLEOPERATION) {
@@ -404,6 +459,31 @@ export class FormulaManager {
 		element.metaPath = metaPath;
 		element.dataValueType = dataValueType;
 		return element;
+	}
+
+	public static generateCustomFunctionFormulaElement(caption: string, dataValueType: DataValueType, functionArguments: FormulaElementArgument[]): FormulaElement {
+		var element = new FormulaElement();
+		element.type = FormulaElementType.COLUMN;
+		element.content = caption;
+		element.arguments = functionArguments;
+		element.dataValueType = dataValueType;
+		return element;
+	}
+
+	public static generateCustomFunctionFormulaElementGroup(caption: string, dataValueType: DataValueType, functionArguments: FormulaElementArgument[]): FormulaElement[] {
+		var response: FormulaElement[] = [];
+		var element = new FormulaElement();
+		element.type = FormulaElementType.FUNCTION;
+		element.content = caption;
+		element.arguments = functionArguments;
+		element.dataValueType = dataValueType;
+		response.push(element);
+		response.push(FormulaManager.generateSingleOperationFormulaElement(KeyboardKey.BracketOpen));
+		for (var i = 0; i < functionArguments.length - 1; i++) {
+			response.push(FormulaManager.generateSingleOperationFormulaElement(KeyboardKey.Comma));
+		}
+		response.push(FormulaManager.generateSingleOperationFormulaElement(KeyboardKey.BracketClose));
+		return response;
 	}
 
 }

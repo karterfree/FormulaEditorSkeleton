@@ -1,7 +1,7 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { TitleStrategy } from '@angular/router';
 import { DataValueType } from './enums';
-import { FormulaDisplayElement, FormulaManager } from './formula-construction';
+import { FormulaDisplayElement, FormulaElementArgument, FormulaManager } from './formula-construction';
 import { IKeyboardProcessorResponse, KeyboardProcessEvent, KeyboardProcessor } from './keyboard-processor';
 
 @Component({
@@ -55,7 +55,20 @@ export class ITFormulaEditorComponent implements OnInit {
 	}
 
 	onCommandHandler(config: any, callback: Function): void {
-		callback(FormulaManager.generateColumnFormulaElement('Account', '7daf20bc-b4d3-470b-b5d0-1e94f55e6561', DataValueType.LOOKUP))
+		/*callback({
+			"items": [
+				FormulaManager.generateColumnFormulaElement('Account', '7daf20bc-b4d3-470b-b5d0-1e94f55e6561', DataValueType.LOOKUP)
+			]
+		});*/
+		callback({
+			"items": FormulaManager.generateCustomFunctionFormulaElementGroup("DATEDIFF", DataValueType.INTEGER, [
+				new FormulaElementArgument("fromDate", DataValueType.DATE),
+				new FormulaElementArgument("toDate", DataValueType.DATE),
+				new FormulaElementArgument("interval", DataValueType.TEXT),
+			]),
+			"caretIndexShift": 9
+		});
+
 	}
 
 	onExtendendHandler(config: any, callback: Function): void {

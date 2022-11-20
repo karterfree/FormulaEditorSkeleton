@@ -105,6 +105,7 @@ export enum KeyboardKey {
 	Equal = "=",
 	Not = "!",
 	AtSign = "@",
+    Comma = ",",
 }
 
 
@@ -169,6 +170,10 @@ export class KeyManager {
 		new KeyItem(KeyboardKey.BracketClose)
 	];
 
+    private _delimeterKeys: KeyItem[] = [
+		new KeyItem(KeyboardKey.Comma)
+	];
+
 	private _mathKeys: KeyItem[] = [
 		new KeyItem(KeyboardKey.Add),
 		new KeyItem(KeyboardKey.Subtract),
@@ -223,10 +228,15 @@ export class KeyManager {
 		return this.has(keyItem, this._conditionKeys);
 	}
 
+    public isDelimeterKey(keyItem: KeyItem): boolean {
+        return this.has(keyItem, this._delimeterKeys);
+    }
+ 
 	public isSingleOperationKey(keyItem: KeyItem): boolean {
 		return this.isMathKey(keyItem) ||
 			this.isBracketKey(keyItem) ||
-			this.isConditionKey(keyItem);
+			this.isConditionKey(keyItem) ||
+            this.isDelimeterKey(keyItem);
 	}
 
 	public isCommandKey(keyItem: KeyItem): boolean {
