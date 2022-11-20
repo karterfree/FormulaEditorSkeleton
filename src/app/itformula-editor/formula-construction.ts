@@ -1,6 +1,7 @@
 import { Data } from "@angular/router";
 import { DataValueType } from "./enums";
 import { KeyboardKey } from "./key-construction";
+import { FormulaUtilities } from "./utils";
 
 export enum FormulaElementType {
 	UNSETTED,
@@ -60,7 +61,10 @@ export class FormulaElement {
 	private _dataValueType: DataValueType;
 	private _content: string;
 	private _metaPath: string;
-	private _arguments: FormulaElementArgument[]
+	private _arguments: FormulaElementArgument[];
+
+	private _isMarkedToDelete: boolean;
+	private _deleteFrom: number;
 
 	public get content() {
 		return this._content;
@@ -110,12 +114,19 @@ export class FormulaElement {
 		return this.content.length;
 	}
 
+	public get isMarkedToDelete(): boolean {
+		return this._isMarkedToDelete;
+	}
+
 	constructor() {
 		this._type = FormulaElementType.UNSETTED;
 		this._dataValueType = DataValueType.UNSETTED;
 		this._content = "";
 		this._metaPath = "";
 		this._arguments = [];
+		this._isMarkedToDelete = false;
+		this._deleteFrom = 0;
+
 	}
 
 	public generateDisplayElement(): FormulaDisplayElement {
@@ -256,6 +267,28 @@ export class FormulaElement {
 			return false;
 		}
 		return true;
+	}
+
+	public isColumn(): boolean {
+		return this.type === FormulaElementType.COLUMN;
+	}
+
+	public isExtendent(): boolean {
+		return !FormulaUtilities.isEmpty(this.metaPath) && this.metaPath.indexOf(".") >= 0;
+	}
+
+	public markToDeleteFrom(caretIndex: number): void {
+		this._isMarkedToDelete = true;
+		
+	}
+
+	public deleteByMark(): void {
+
+	}
+
+	public unMarkToDelete(): void {
+		this._isMarkedToDelete = false;
+		this._deleteFrom = 0;
 	}
 
 }
@@ -436,6 +469,14 @@ export class FormulaManager {
 		var length = 0;
 		this._formulaElements.forEach((x) => length+=x.contentLength);
 		return length;
+	}
+
+	public hasMarkToDelete(): boolean {
+		return this._formulaElements.filter(x=>x.isMarkedToDelete).length > 0;
+	}
+
+	public removeAllMarksToDelete(): void {
+		this._formulaElements.filter(x=>x.isMarkedToDelete).forEach(x=>x.unMarkToDelete());
 	}
 
 	public static generateEmptyFormulaElement(): FormulaElement {

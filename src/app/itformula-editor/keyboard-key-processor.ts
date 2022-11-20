@@ -70,7 +70,19 @@ export class KeyboardKeyProcessor {
 		if (this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex) >= formulaElement.contentLength) {
 			formulaElement = this._formulaManager.getNextElement(formulaElement);
 		}
-		if (formulaElement != null && formulaElement.removeByDelete(this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex))) {
+		if (formulaElement != null) {
+			var innerCaretIndex = this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
+			if (formulaElement.isColumn()) {
+				if (!formulaElement.isMarkedToDelete) {
+					formulaElement.markToDeleteFrom(innerCaretIndex);
+				} else {
+					
+				}
+				
+			} else {
+				formulaElement.removeByDelete(innerCaretIndex);
+			}
+
 		}
 		return formulaElement;
 	}
@@ -165,6 +177,9 @@ export class KeyboardKeyProcessor {
 		const keyItem: KeyItem = KeyItem.fromKeyboardEvent(event);
 		if (this._keyManager.isDeniedKey(keyItem)) {
 			return true;
+		}
+		if (!this._keyManager.isRemoveKey(keyItem) && this._formulaManager.hasMarkToDelete()) {
+			this._formulaManager.removeAllMarksToDelete();
 		}
 		if (this._keyManager.isRemoveKey(keyItem)) {
 			this.processRemoveOpertion(keyItem);

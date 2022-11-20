@@ -55,19 +55,19 @@ export class ITFormulaEditorComponent implements OnInit {
 	}
 
 	onCommandHandler(config: any, callback: Function): void {
-		/*callback({
+		callback({
 			"items": [
 				FormulaManager.generateColumnFormulaElement('Account', '7daf20bc-b4d3-470b-b5d0-1e94f55e6561', DataValueType.LOOKUP)
 			]
-		});*/
-		callback({
+		});
+		/*callback({
 			"items": FormulaManager.generateCustomFunctionFormulaElementGroup("DATEDIFF", DataValueType.INTEGER, [
 				new FormulaElementArgument("fromDate", DataValueType.DATE),
 				new FormulaElementArgument("toDate", DataValueType.DATE),
 				new FormulaElementArgument("interval", DataValueType.TEXT),
 			]),
 			"caretIndexShift": 9
-		});
+		});*/
 
 	}
 
