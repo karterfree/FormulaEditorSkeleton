@@ -1,7 +1,8 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { TitleStrategy } from '@angular/router';
 import { DataValueType } from './enums';
-import { FormulaDisplayElement, FormulaElementArgument, FormulaManager } from './formula-construction';
+import { FormulaDisplayElement, FormulaElementArgument } from './formula-construction';
+import { FormulaManager } from './formula-manager';
 import { IKeyboardProcessorResponse, KeyboardProcessEvent, KeyboardProcessor } from './keyboard-processor';
 
 @Component({

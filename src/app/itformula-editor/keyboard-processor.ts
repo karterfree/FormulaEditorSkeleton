@@ -1,5 +1,5 @@
-import { DataValueType } from "./enums";
-import { FormulaDisplayElement, FormulaElement, FormulaManager } from "./formula-construction";
+import { FormulaDisplayElement, FormulaElement } from "./formula-construction";
+import { FormulaManager } from "./formula-manager";
 import { KeyboardKeyProcessor } from "./keyboard-key-processor";
 
 

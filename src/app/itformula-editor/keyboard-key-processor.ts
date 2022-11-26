@@ -1,5 +1,6 @@
 import { DataValueType } from "./enums";
-import { FormulaElement, FormulaElementType, FormulaManager } from "./formula-construction";
+import { FormulaElement, FormulaElementType } from "./formula-construction";
+import { FormulaManager } from "./formula-manager";
 import { KeyboardKey, KeyItem, KeyManager } from "./key-construction";
 import { ICommandOperationResponse, IExtendColumnRequest, IExtendColumnResponse, KeyboardProcessEvent } from "./keyboard-processor";
 import { FormulaUtilities } from "./utils";
@@ -42,14 +43,14 @@ export class KeyboardKeyProcessor {
 		if (formulaElement == null) {
 			return;
 		}
-		var prevFormulaElement = this._formulaManager.getPrevElement(formulaElement);
-		var nextFormulaElement = this._formulaManager.getNextElement(formulaElement);
 		if (keyItem.key === KeyboardKey.Backspace) {
 			formulaElement = this._processRemoveByBackspaceOpertion(formulaElement);
 		} else if (keyItem.key === KeyboardKey.Delete) {
 			formulaElement = this._processRemoveByDeleteOpertion(formulaElement);
 		}
-		if (formulaElement === null || formulaElement.isEmpty()) {
+		if (formulaElement !== null && formulaElement.isEmpty()) {
+			var prevFormulaElement = this._formulaManager.getPrevElement(formulaElement);
+			var nextFormulaElement = this._formulaManager.getNextElement(formulaElement);
 			this._formulaManager.tryJoinElements(prevFormulaElement, nextFormulaElement)
 		}
 	}
@@ -91,7 +92,7 @@ export class KeyboardKeyProcessor {
 
 	private _markToDeleteFrom(formulaElement: FormulaElement) {
 		var prevFormulaElement = this._formulaManager.getPrevElement(formulaElement);
-		if (formulaElement.isColumn() && prevFormulaElement != null && formulaElement.isExtBy(prevFormulaElement) && prevFormulaElement.content === KeyboardKey.Dot) {
+		if (formulaElement.isColumn() && prevFormulaElement != null && formulaElement.isJoinedWith(prevFormulaElement) && prevFormulaElement.content === KeyboardKey.Dot) {
 			formulaElement = prevFormulaElement;
 		}
 		formulaElement.markToDelete();
@@ -147,22 +148,26 @@ export class KeyboardKeyProcessor {
 		var operationFormulaElement = FormulaManager.generateSingleOperationFormulaElement(keyItem.key);
 		var formulaElement = this._formulaManager.forceGetCurrentElement(this.caretIndex);
 		var innerCaretIndex = this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex)
-		if (innerCaretIndex === 0) {
+		if (innerCaretIndex === 0 && this._formulaManager.canInsertBefore(formulaElement)) {
 			this._formulaManager.insertBefore(operationFormulaElement, formulaElement);
 		} else if (innerCaretIndex >= formulaElement.contentLength) {
+			var insertPosition = this._formulaManager.getPositionForInsertAfter(formulaElement);
+			formulaElement = this._formulaManager.getElementByIndex(insertPosition) || formulaElement;
 			this._formulaManager.insertAfter(operationFormulaElement, formulaElement);
 		} else {
-			this._formulaManager.insertAfter(operationFormulaElement, formulaElement);
 			if (formulaElement.canBeSplitted()) {
+				this._formulaManager.insertAfter(operationFormulaElement, formulaElement);
 				var rightFormulaElement = formulaElement.split(innerCaretIndex);
 				if (rightFormulaElement != null) {
 					this._formulaManager.insertAfter(rightFormulaElement, operationFormulaElement);
 				}
 			} else {
-				this.caretIndex += (formulaElement.contentLength - innerCaretIndex);
+				var insertPosition = this._formulaManager.getPositionForInsertAfter(formulaElement);
+				formulaElement = this._formulaManager.getElementByIndex(insertPosition) || formulaElement;
+				this._formulaManager.insertAfter(operationFormulaElement, formulaElement);
 			}
 		}
-		this.caretIndex += keyItem.key.length;
+		this.caretIndex = this._formulaManager.getActualFormulaElementCaretIndex(operationFormulaElement, operationFormulaElement.contentLength);
 	}
 
 	public canProcessCommandKey(): boolean {
@@ -262,7 +267,7 @@ export class KeyboardKeyProcessor {
 			if (prevFormulaElement != null) {
 				if (this._isEditabledElement(prevFormulaElement)) {
 					return prevFormulaElement;
-				} else if (!prevFormulaElement.isExtBy(formulaElement)) {
+				} else if (!prevFormulaElement.isJoinedWith(formulaElement)) {
 					var newFormulaElement = FormulaManager.generateEmptyFormulaElement();
 					this._formulaManager.insertBefore(newFormulaElement, formulaElement);
 					return newFormulaElement;
@@ -292,7 +297,7 @@ export class KeyboardKeyProcessor {
 		if (nextElement == null) {
 			return null;
 		}
-		if (currentElement.isExtBy(nextElement)) {
+		if (currentElement.isJoinedWith(nextElement)) {
 			return this._getNextEditableElement(nextElement);
 		}
 		return nextElement;
