@@ -15,10 +15,13 @@ export interface IKeyboardProcessorResponse {
 	displayList: FormulaDisplayElement[]
 }
 
+export interface IExtendColumnRequest {
+	extRootMetaPath: string,
+	extKey: string
+}
+
 export interface IExtendColumnResponse {
-	content: string;
-	metaPath: string;
-	dataValueType: DataValueType
+	items: FormulaElement[],
 }
 
 export interface ICommandOperationResponse {

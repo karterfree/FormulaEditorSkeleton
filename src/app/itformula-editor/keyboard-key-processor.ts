@@ -1,7 +1,7 @@
 import { DataValueType } from "./enums";
 import { FormulaElement, FormulaElementType, FormulaManager } from "./formula-construction";
 import { KeyboardKey, KeyItem, KeyManager } from "./key-construction";
-import { ICommandOperationResponse, IExtendColumnResponse, KeyboardProcessEvent } from "./keyboard-processor";
+import { ICommandOperationResponse, IExtendColumnRequest, IExtendColumnResponse, KeyboardProcessEvent } from "./keyboard-processor";
 import { FormulaUtilities } from "./utils";
 
 export class KeyboardKeyProcessor {
@@ -59,10 +59,44 @@ export class KeyboardKeyProcessor {
 		if (this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex) <= 0) {
 			formulaElement = this._formulaManager.getPrevElement(formulaElement);
 		}
-		if (formulaElement != null && formulaElement.removeByBackspace(this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex))) {
-			this.caretIndex--;
+		if (formulaElement != null) {
+			if (formulaElement.isMarkedToDelete) {
+				this._removeMarkedElements();
+			} else if (this._canRemoveOperationWithoutMark(formulaElement)) {
+				formulaElement.removeByBackspace(this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex))
+				this.caretIndex--;
+			} else {
+				this._markToDeleteFrom(formulaElement);
+			}
 		}
 		return formulaElement;
+	}
+
+	private _removeMarkedElements(): void {
+		var items = this._formulaManager.getMarkedToDeleteElements();
+		if (items.length <= 0) {
+			return;
+		}
+		this.caretIndex = this._formulaManager.getActualFormulaElementCaretIndex(items[0]);
+		items.forEach(x=>this._formulaManager.removeElement(x));
+	}
+
+	private _canRemoveOperationWithoutMark(formulaElement: FormulaElement): boolean {
+		var nextElement = this._formulaManager.getNextElement(formulaElement);
+		if (!formulaElement.canRemoveOperationWithoutMark() || (!FormulaUtilities.isEmpty(formulaElement.extKey) && nextElement != null && formulaElement.extKey === nextElement.extKey)) {
+			return false;
+		}
+		return true;
+	}
+
+	private _markToDeleteFrom(formulaElement: FormulaElement) {
+		var prevFormulaElement = this._formulaManager.getPrevElement(formulaElement);
+		if (formulaElement.isColumn() && prevFormulaElement != null && formulaElement.isExtBy(prevFormulaElement) && prevFormulaElement.content === KeyboardKey.Dot) {
+			formulaElement = prevFormulaElement;
+		}
+		formulaElement.markToDelete();
+		var nextExtChainElements = this._formulaManager.getExtChainElementsFrom(formulaElement);
+		nextExtChainElements.forEach(x=>x.markToDelete());
 	}
 
 	private _processRemoveByDeleteOpertion(element: FormulaElement): FormulaElement | null {
@@ -72,17 +106,15 @@ export class KeyboardKeyProcessor {
 		}
 		if (formulaElement != null) {
 			var innerCaretIndex = this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
-			if (formulaElement.isColumn()) {
-				if (!formulaElement.isMarkedToDelete) {
-					formulaElement.markToDeleteFrom(innerCaretIndex);
+			if (formulaElement != null) {
+				if (formulaElement.isMarkedToDelete) {
+					this._removeMarkedElements();
+				} else if (this._canRemoveOperationWithoutMark(formulaElement)) {
+					formulaElement.removeByDelete(innerCaretIndex);
 				} else {
-					
+					this._markToDeleteFrom(formulaElement);
 				}
-				
-			} else {
-				formulaElement.removeByDelete(innerCaretIndex);
 			}
-
 		}
 		return formulaElement;
 	}
@@ -99,7 +131,7 @@ export class KeyboardKeyProcessor {
 		}
 		var formulaElementCaretIndex = this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
 		var prevFormulaElement = this._formulaManager.getPrevElement(formulaElement);
-		if (keyItem.key === '.' && formulaElement.IsFirstCaretIndex(formulaElementCaretIndex) && prevFormulaElement?.mayBeExtendent()) {
+		if (keyItem.key === KeyboardKey.Dot && formulaElement.IsFirstCaretIndex(formulaElementCaretIndex) && prevFormulaElement?.mayBeExtendent()) {
 			this.processExtendendOpertion(keyItem, prevFormulaElement);
 			return;
 		}
@@ -162,14 +194,21 @@ export class KeyboardKeyProcessor {
 	}
 
 	processExtendendOpertion(keyItem: KeyItem, formulaElement: FormulaElement): void {
-		this._callHandler(KeyboardProcessEvent.EXTENDENT, {
-			"rootMetaPath": formulaElement.metaPath 
-		}, (response: IExtendColumnResponse) => {
-			var oldContentLength = formulaElement.contentLength;
-			formulaElement.content = response.content;
-			formulaElement.metaPath = response.metaPath;
-			formulaElement.dataValueType = response.dataValueType;
-			this.caretIndex += formulaElement.contentLength - oldContentLength;
+		var request: IExtendColumnRequest = {
+			"extRootMetaPath": formulaElement.metaPath,
+			"extKey": formulaElement.froceGetExtKey()
+		};
+		this._callHandler(KeyboardProcessEvent.EXTENDENT, request, (response: IExtendColumnResponse) => {
+			var contentShift: number = 0;
+			response.items.reverse().forEach((item: FormulaElement) => {
+				item.extKey = formulaElement.extKey;
+				this._formulaManager.insertAfter(item, formulaElement);
+				var dotElement = FormulaManager.generateSingleOperationFormulaElement(KeyboardKey.Dot);
+				dotElement.extKey = formulaElement.extKey;
+				this._formulaManager.insertAfter(dotElement, formulaElement);
+				contentShift += item.contentLength + 1;
+			});
+			this.caretIndex += contentShift;
 		});
 	}
 
@@ -214,30 +253,51 @@ export class KeyboardKeyProcessor {
 
 	private _getEditableElement(): FormulaElement {
 		var formulaElement: FormulaElement = this._formulaManager.forceGetCurrentElement(this.caretIndex);
-		if (!this._isEditabledElement(formulaElement)) {
-			var innerCaretIndex = this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
-			if (formulaElement.IsFirstCaretIndex(innerCaretIndex)) {
-				var prevFormulaElement = this._formulaManager.getPrevElement(formulaElement);
-				if (prevFormulaElement != null && this._isEditabledElement(prevFormulaElement)) {
+		if (this._isEditabledElement(formulaElement)) {
+			return formulaElement;
+		}
+		var innerCaretIndex = this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
+		if (formulaElement.IsFirstCaretIndex(innerCaretIndex)) {
+			var prevFormulaElement = this._formulaManager.getPrevElement(formulaElement);
+			if (prevFormulaElement != null) {
+				if (this._isEditabledElement(prevFormulaElement)) {
 					return prevFormulaElement;
-				} else  {
+				} else if (!prevFormulaElement.isExtBy(formulaElement)) {
 					var newFormulaElement = FormulaManager.generateEmptyFormulaElement();
 					this._formulaManager.insertBefore(newFormulaElement, formulaElement);
 					return newFormulaElement;
 				}
 			} else {
-				var nextFormulaElement = this._formulaManager.getNextElement(formulaElement);
-				if (nextFormulaElement != null && this._isEditabledElement(nextFormulaElement)) {
-					return nextFormulaElement;
-				} else  {
-					var newFormulaElement = FormulaManager.generateEmptyFormulaElement();
-					this._formulaManager.insertAfter(newFormulaElement, formulaElement);
-					return newFormulaElement;
-				}
+				var newFormulaElement = FormulaManager.generateEmptyFormulaElement();
+				this._formulaManager.insertBefore(newFormulaElement, formulaElement);
+				return newFormulaElement;
 			}
 		}
-		return formulaElement;
+		var nextEditableElement = this._getNextEditableElement(formulaElement);
+		if (nextEditableElement != null && this._isEditabledElement(nextEditableElement)) {
+			return nextEditableElement;
+		} else  {
+			var newFormulaElement = FormulaManager.generateEmptyFormulaElement();
+			if (nextEditableElement != null) {
+				this._formulaManager.insertAfter(newFormulaElement, nextEditableElement);
+			} else {
+				this._formulaManager.add(newFormulaElement)
+			}
+			return newFormulaElement;
+		}
 	}
+
+	private _getNextEditableElement(currentElement: FormulaElement): FormulaElement | null {
+		var nextElement = this._formulaManager.getNextElement(currentElement);
+		if (nextElement == null) {
+			return null;
+		}
+		if (currentElement.isExtBy(nextElement)) {
+			return this._getNextEditableElement(nextElement);
+		}
+		return nextElement;
+	}
+
 
 	private _isInString(): boolean {
 		var formulaElement = this._formulaManager.getCurrentElement(this.caretIndex);

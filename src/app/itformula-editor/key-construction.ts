@@ -106,6 +106,7 @@ export enum KeyboardKey {
 	Not = "!",
 	AtSign = "@",
     Comma = ",",
+	Dot = "."
 }
 
 

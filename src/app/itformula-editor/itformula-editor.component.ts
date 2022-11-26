@@ -73,9 +73,9 @@ export class ITFormulaEditorComponent implements OnInit {
 
 	onExtendendHandler(config: any, callback: Function): void {
 		callback({
-			"content": "Account.Amount",
-			"metaPath": config.rootMetaPath + '.8daf20bc-b4d3-470b-b5d0-1e94f55e6562',
-			"dataValueType": DataValueType.FLOAT
+			"items": [
+				FormulaManager.generateColumnFormulaElement('Amount', '8daf20bc-b4d3-470b-b5d0-1e94f55e6562', DataValueType.FLOAT)
+			]
 		});
 	}
 

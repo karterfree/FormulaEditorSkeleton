@@ -15,14 +15,20 @@ export class FormulaDisplayElement {
 	content: string;
 	type: FormulaElementType;
 	dataValueType: DataValueType;
+	markedToDelete: boolean;
 
 	constructor(content: string, type: FormulaElementType, dataValueType: DataValueType) {
 		this.content = content;
 		this.type = type;
 		this.dataValueType = dataValueType;
+		this.markedToDelete = false;
 	}
 
 	public generateVisualizatorStyleClass(): string {
+		return [this._generateDateAndTypeStyleClass(), this._generateMarkedToDeleteStyleClass()].join(" ");
+	}
+
+	private _generateDateAndTypeStyleClass(): string {
 		switch (this.type) {
 			case FormulaElementType.COLUMN:
 				return "dvt-column";
@@ -39,6 +45,11 @@ export class FormulaDisplayElement {
 				return "dvt-undefined";
 		}
 	}
+	private _generateMarkedToDeleteStyleClass(): string {
+		return this.markedToDelete
+			? "marked-to-delete"
+			: ""
+		}
 }
 
 export class FormulaElementArgument {
@@ -62,6 +73,7 @@ export class FormulaElement {
 	private _content: string;
 	private _metaPath: string;
 	private _arguments: FormulaElementArgument[];
+	private _extKey: string;
 
 	private _isMarkedToDelete: boolean;
 	private _deleteFrom: number;
@@ -118,6 +130,16 @@ export class FormulaElement {
 		return this._isMarkedToDelete;
 	}
 
+	public get extKey(): string {
+		return this._extKey;
+	}
+
+	public set extKey(value: string) {
+		if (value !== this._extKey) {
+			this._extKey = value;
+		}
+	}
+
 	constructor() {
 		this._type = FormulaElementType.UNSETTED;
 		this._dataValueType = DataValueType.UNSETTED;
@@ -126,11 +148,13 @@ export class FormulaElement {
 		this._arguments = [];
 		this._isMarkedToDelete = false;
 		this._deleteFrom = 0;
-
+		this._extKey = "";
 	}
 
 	public generateDisplayElement(): FormulaDisplayElement {
-		return new FormulaDisplayElement(this.content, this.type, this.dataValueType);
+		var displayElement = new FormulaDisplayElement(this.content, this.type, this.dataValueType);
+		displayElement.markedToDelete = this._isMarkedToDelete;
+		return displayElement;
 	}
 
 	public canChangeType(): boolean {
@@ -277,18 +301,37 @@ export class FormulaElement {
 		return !FormulaUtilities.isEmpty(this.metaPath) && this.metaPath.indexOf(".") >= 0;
 	}
 
-	public markToDeleteFrom(caretIndex: number): void {
-		this._isMarkedToDelete = true;
-		
+	public isExtBy(nextFormulaElement: FormulaElement): boolean {
+		return nextFormulaElement != null && nextFormulaElement.extKey === this.extKey;
 	}
 
-	public deleteByMark(): void {
-
+	public markToDelete(): void {
+		this._isMarkedToDelete = true;
+		
 	}
 
 	public unMarkToDelete(): void {
 		this._isMarkedToDelete = false;
 		this._deleteFrom = 0;
+	}
+
+	public canRemoveOperationWithoutMark(): boolean {
+		if (this.type === FormulaElementType.COLUMN) {
+			return false;
+		}
+		if (this.type === FormulaElementType.FUNCTION) {
+			return false;
+		}
+		return true;
+	}
+
+	
+
+	public froceGetExtKey(): string {
+		if (FormulaUtilities.isEmpty(this.extKey)) {
+			this.extKey = FormulaUtilities.generateGUID();
+		}
+		return this.extKey;
 	}
 
 }
@@ -405,7 +448,7 @@ export class FormulaManager {
 		return caretIndex - totalElementStartPosition;
 	}
 
-	public getActualFormulaElementCaretIndex(element: FormulaElement, innerCaretIndex: number): number {
+	public getActualFormulaElementCaretIndex(element: FormulaElement, innerCaretIndex: number = 0): number {
 		var totalElementStartPosition: number = 0;
 		for (var i = 0; i < this.getElementPosition(element); i++) {
 			totalElementStartPosition+= this._formulaElements[i].contentLength;
@@ -479,6 +522,18 @@ export class FormulaManager {
 		this._formulaElements.filter(x=>x.isMarkedToDelete).forEach(x=>x.unMarkToDelete());
 	}
 
+	public getMarkedToDeleteElements(): FormulaElement[]  {
+		return this._formulaElements.filter(x=>x.isMarkedToDelete)
+	}
+
+	public getExtChainElementsFrom(element: FormulaElement): FormulaElement[]  {
+		if (FormulaUtilities.isEmpty(element.extKey)) {
+			return [];
+		}
+		var startPosition = this.getElementPosition(element);
+		return this._formulaElements.filter(x=>this.getElementPosition(x) > startPosition && x.extKey === element.extKey);
+	}
+
 	public static generateEmptyFormulaElement(): FormulaElement {
 		var element = new FormulaElement();
 		element.type = FormulaElementType.UNSETTED;
@@ -526,5 +581,7 @@ export class FormulaManager {
 		response.push(FormulaManager.generateSingleOperationFormulaElement(KeyboardKey.BracketClose));
 		return response;
 	}
+
+	
 
 }
