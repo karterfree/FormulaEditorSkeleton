@@ -2,7 +2,7 @@ import { DataValueType } from "./enums";
 import { FormulaElement, FormulaElementType } from "./formula-construction";
 import { FormulaManager } from "./formula-manager";
 import { KeyboardKey, KeyItem, KeyManager } from "./key-construction";
-import { ICommandOperationResponse, IExtendColumnRequest, IExtendColumnResponse, KeyboardProcessEvent } from "./keyboard-processor";
+import { ICommandOperationRequest, ICommandOperationResponse, IExtendColumnRequest, IExtendColumnResponse, KeyboardProcessEvent } from "./keyboard-processor";
 import { FormulaUtilities } from "./utils";
 
 export class KeyboardKeyProcessor {
@@ -177,29 +177,38 @@ export class KeyboardKeyProcessor {
 	}
 
 	public processCommandOpertion(keyItem: KeyItem): void {
-		this._callHandler(KeyboardProcessEvent.COMMAND, null, (response: ICommandOperationResponse) => {
-			var formulaElement = this._formulaManager.getCurrentElement(this.caretIndex);
-			var innerCaretIndex = this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex);
-			if (!FormulaUtilities.isEmpty(response.items)) {
-				var contentShift: number = 0;
-				if (formulaElement.IsFirstCaretIndex(innerCaretIndex)) {
-					response.items.forEach((item: FormulaElement) => {
-						contentShift += item.contentLength;
-						this._formulaManager.insertBefore(item, formulaElement);
-					});
-				} else {
-					response.items.reverse().forEach((item: FormulaElement) => {
-						contentShift += item.contentLength;
-						this._formulaManager.insertAfter(item, formulaElement);
-					});
-				}
-				this.caretIndex += response.caretIndexShift ?? contentShift;
+		var caretDomPosition = this._formulaManager.getCaretDomPosition(this.caretIndex);
+		var request: ICommandOperationRequest = {
+			"elementIndex": caretDomPosition.elementIndex,
+			"elementCaretIndex": caretDomPosition.elementCaretIndex
+		}
+		this._callHandler(KeyboardProcessEvent.COMMAND, request, (response: ICommandOperationResponse) => {
+			if (FormulaUtilities.isEmpty(response.items)) {
+				return;
 			}
+			var contentShift: number = 0;
+			var formulaElement = this._formulaManager.getCurrentElement(this.caretIndex);
+			if (formulaElement !== null && formulaElement.IsFirstCaretIndex(this._formulaManager.getFormulaElementCaretIndex(formulaElement, this.caretIndex))) {
+				response.items.forEach((item: FormulaElement) => {
+					contentShift += item.contentLength;
+					this._formulaManager.insertBefore(item, formulaElement);
+				});
+			} else {
+				var position = formulaElement !== null ? this._formulaManager.getElementPosition(formulaElement) : 0;
+				response.items.reverse().forEach((item: FormulaElement) => {
+					contentShift += item.contentLength;
+					this._formulaManager.insertAtPosition(item, position);
+				});
+			}
+			this.caretIndex += response.caretIndexShift ?? contentShift;
 		});
 	}
 
 	processExtendendOpertion(keyItem: KeyItem, formulaElement: FormulaElement): void {
+		var caretDomPosition = this._formulaManager.getCaretDomPosition(this.caretIndex);
 		var request: IExtendColumnRequest = {
+			"elementIndex": caretDomPosition.elementIndex,
+			"elementCaretIndex": caretDomPosition.elementCaretIndex,
 			"extRootMetaPath": formulaElement.metaPath,
 			"extKey": formulaElement.froceGetExtKey()
 		};

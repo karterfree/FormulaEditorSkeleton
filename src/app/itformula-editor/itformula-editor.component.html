@@ -2,6 +2,7 @@
     <div #visualizator class="visual-view" contenteditable="true" (keydown)="onKeyDown($event)" (keyup)="onKeyUp($event)" (paste)="onPaste($event)" (mouseup)="onMouseUp($event)">
         <span *ngFor="let item of formulaDisplayElements" [ngClass]="item.generateVisualizatorStyleClass()">{{item.content}}</span>
     </div>
+    <app-itformula-editor-command-line></app-itformula-editor-command-line>
     <div #elementsLog></div>
 </div>
 <div>

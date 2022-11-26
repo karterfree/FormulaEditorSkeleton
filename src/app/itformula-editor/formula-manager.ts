@@ -3,6 +3,11 @@ import { FormulaDisplayElement, FormulaElement, FormulaElementArgument, FormulaE
 import { KeyboardKey } from "./key-construction";
 import { FormulaUtilities } from "./utils";
 
+export interface ICaretDomPosition {
+	elementIndex: number;
+	elementCaretIndex: number;
+}
+
 export class FormulaManager {
 	private _formulaElements: FormulaElement[];
 
@@ -13,7 +18,7 @@ export class FormulaManager {
 	public getCurrentElement(caretIndex: number): FormulaElement {
 		var startFrom: number = 0;
 		var isFounded: boolean = false;
-		var selectedElement: FormulaElement = this._formulaElements[this._formulaElements.length-1];
+		var selectedElement: FormulaElement = this._formulaElements[this._formulaElements.length-1] || null;
 		this._formulaElements.forEach((element)=> {
 			if (!isFounded) {
 				if (caretIndex >= startFrom && caretIndex < (startFrom + element.contentLength)) {
@@ -231,6 +236,26 @@ export class FormulaManager {
 		}
 		var startPosition = this.getElementPosition(element);
 		return this._formulaElements.filter(x=>this.getElementPosition(x) > startPosition && x.extKey === element.extKey);
+	}
+
+	public getCaretDomPosition(caretIndex: number): ICaretDomPosition {
+		var elementIndex = 0;
+		var elementCaretIndex = 0;
+		var formulaElement = this.getCurrentElement(caretIndex);
+		if (formulaElement != null) {
+			elementIndex = this.getElementPosition(formulaElement);
+			elementCaretIndex = this.getFormulaElementCaretIndex(formulaElement, caretIndex);
+			var prevFormulaElement = this.getPrevElement(formulaElement);
+			if (elementCaretIndex < 0 && prevFormulaElement != null) {
+				elementIndex = this.getElementPosition(formulaElement);
+				formulaElement = prevFormulaElement;
+				elementCaretIndex =  this.getFormulaElementCaretIndex(formulaElement, caretIndex);
+			}
+		}
+		return {
+			"elementIndex": elementIndex,
+			"elementCaretIndex": elementCaretIndex
+		};
 	}
 
 	public static generateEmptyFormulaElement(): FormulaElement {

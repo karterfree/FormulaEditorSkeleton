@@ -1,9 +1,8 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import { TitleStrategy } from '@angular/router';
 import { DataValueType } from './enums';
-import { FormulaDisplayElement, FormulaElementArgument } from './formula-construction';
+import { FormulaDisplayElement} from './formula-construction';
 import { FormulaManager } from './formula-manager';
-import { IKeyboardProcessorResponse, KeyboardProcessEvent, KeyboardProcessor } from './keyboard-processor';
+import { ICommandOperationRequest, IKeyboardProcessorResponse, KeyboardProcessEvent, KeyboardProcessor } from './keyboard-processor';
 
 @Component({
 	selector: 'app-itformula-editor',
@@ -55,12 +54,23 @@ export class ITFormulaEditorComponent implements OnInit {
 		}, 4);
 	}
 
-	onCommandHandler(config: any, callback: Function): void {
+	onCommandHandler(config: ICommandOperationRequest, callback: Function): void {
+		/*setTimeout(()=>{
+			this.updateCaretPosition(config.elementIndex, config.elementCaretIndex);
+			this.updateCursorPosition(this.visualizator.nativeElement);
+			callback({
+				"items": [
+					FormulaManager.generateColumnFormulaElement('Account', '7daf20bc-b4d3-470b-b5d0-1e94f55e6561', DataValueType.LOOKUP)
+				]
+			});
+		}, 4);*/
+
 		callback({
 			"items": [
 				FormulaManager.generateColumnFormulaElement('Account', '7daf20bc-b4d3-470b-b5d0-1e94f55e6561', DataValueType.LOOKUP)
 			]
 		});
+		
 		/*callback({
 			"items": FormulaManager.generateCustomFunctionFormulaElementGroup("DATEDIFF", DataValueType.INTEGER, [
 				new FormulaElementArgument("fromDate", DataValueType.DATE),
@@ -123,6 +133,11 @@ export class ITFormulaEditorComponent implements OnInit {
 		this.cursorX = coords.x;
 		this.cursorY = coords.y;
 		this.cursorIndex = this.caretIndex;
+		console.log("x: " + this.cursorX + "; y: " + this.cursorY + "; index: " + this.cursorIndex);
+	}
+
+	onCommandEditPaste(event: any): void {
+		event.preventDefault();
 	}
 
 	onPaste(event: any): void {

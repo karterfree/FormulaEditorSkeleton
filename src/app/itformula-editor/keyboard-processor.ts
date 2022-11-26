@@ -1,3 +1,4 @@
+import { Observable } from "rxjs";
 import { FormulaDisplayElement, FormulaElement } from "./formula-construction";
 import { FormulaManager } from "./formula-manager";
 import { KeyboardKeyProcessor } from "./keyboard-key-processor";
@@ -9,19 +10,26 @@ export enum KeyboardProcessEvent {
 	EXTENDENT = "Extendent"
 }
 
-export interface IKeyboardProcessorResponse {
+export interface IBaseProcessorRequest {
 	elementIndex: number;
 	elementCaretIndex: number;
+}
+
+export interface IKeyboardProcessorResponse extends IBaseProcessorRequest {
 	displayList: FormulaDisplayElement[]
 }
 
-export interface IExtendColumnRequest {
+export interface IExtendColumnRequest extends IBaseProcessorRequest {
 	extRootMetaPath: string,
 	extKey: string
 }
 
 export interface IExtendColumnResponse {
 	items: FormulaElement[],
+}
+
+export interface ICommandOperationRequest extends IBaseProcessorRequest {
+	
 }
 
 export interface ICommandOperationResponse {
@@ -113,22 +121,10 @@ export class KeyboardProcessor {
 	private _invokeFinishHendler() {
 		this._formulaManager.actualizeFormulaElementsDataValueType();
 		var caretIndex: number = this._keyboardKeyProcessor.caretIndex;
-		var elementPosition = 0;
-		var elementCaretIndex = 0;
-		var formulaElement = this._formulaManager.getCurrentElement(caretIndex);
-		if (formulaElement != null) {
-			elementPosition = this._formulaManager.getElementPosition(formulaElement);
-			elementCaretIndex = this._formulaManager.getFormulaElementCaretIndex(formulaElement, caretIndex);
-			var prevFormulaElement = this._formulaManager.getPrevElement(formulaElement);
-			if (elementCaretIndex < 0 && prevFormulaElement != null) {
-				elementPosition = this._formulaManager.getElementPosition(formulaElement);
-				formulaElement = prevFormulaElement;
-				elementCaretIndex =  this._formulaManager.getFormulaElementCaretIndex(formulaElement, caretIndex);
-			}
-		}
+		var caretDomPosition = this._formulaManager.getCaretDomPosition(caretIndex);
 		this._callHandler(KeyboardProcessEvent.FINISH, {
-			"elementIndex": elementPosition,
-			"elementCaretIndex": elementCaretIndex,
+			"elementIndex": caretDomPosition.elementIndex,
+			"elementCaretIndex": caretDomPosition.elementCaretIndex,
 			"displayList": this._formulaManager.generateFormulaDisplayElementList()
 		});
 	}
