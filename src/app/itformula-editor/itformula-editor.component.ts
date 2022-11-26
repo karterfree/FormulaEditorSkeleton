@@ -55,21 +55,19 @@ export class ITFormulaEditorComponent implements OnInit {
 	}
 
 	onCommandHandler(config: ICommandOperationRequest, callback: Function): void {
-		/*setTimeout(()=>{
-			this.updateCaretPosition(config.elementIndex, config.elementCaretIndex);
-			this.updateCursorPosition(this.visualizator.nativeElement);
+		setTimeout(()=>{
 			callback({
 				"items": [
 					FormulaManager.generateColumnFormulaElement('Account', '7daf20bc-b4d3-470b-b5d0-1e94f55e6561', DataValueType.LOOKUP)
 				]
 			});
-		}, 4);*/
+		}, 4);
 
-		callback({
+		/*callback({
 			"items": [
 				FormulaManager.generateColumnFormulaElement('Account', '7daf20bc-b4d3-470b-b5d0-1e94f55e6561', DataValueType.LOOKUP)
 			]
-		});
+		});*/
 		
 		/*callback({
 			"items": FormulaManager.generateCustomFunctionFormulaElementGroup("DATEDIFF", DataValueType.INTEGER, [

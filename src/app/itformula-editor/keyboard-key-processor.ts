@@ -201,6 +201,7 @@ export class KeyboardKeyProcessor {
 				});
 			}
 			this.caretIndex += response.caretIndexShift ?? contentShift;
+			this._callHandler(KeyboardProcessEvent.FINISH);
 		});
 	}
 
@@ -223,6 +224,7 @@ export class KeyboardKeyProcessor {
 				contentShift += item.contentLength + 1;
 			});
 			this.caretIndex += contentShift;
+			this._callHandler(KeyboardProcessEvent.FINISH);
 		});
 	}
 

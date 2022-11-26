@@ -56,6 +56,7 @@ export class KeyboardProcessor {
 	}
 
 	private _subscribeOnKeyboardKeyProcessorEvents(): void {
+		this._keyboardKeyProcessor.subscribe(KeyboardProcessEvent.FINISH, (...args: any) => this._invokeFinishHendler());
 		this._keyboardKeyProcessor.subscribe(KeyboardProcessEvent.COMMAND, (...args: any) => this._callHandler(KeyboardProcessEvent.COMMAND, ...args));
 		this._keyboardKeyProcessor.subscribe(KeyboardProcessEvent.EXTENDENT, (...args: any) => this._callHandler(KeyboardProcessEvent.EXTENDENT, ...args));
 	}
