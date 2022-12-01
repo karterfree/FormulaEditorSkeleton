@@ -1,4 +1,5 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { ICommandLineCommand } from '../itformula-editor-command-line/itformula-editor-command-line.component';
 import { DataValueType } from './enums';
 import { FormulaDisplayElement} from './formula-construction';
 import { FormulaManager } from './formula-manager';
@@ -18,6 +19,9 @@ export class ITFormulaEditorComponent implements OnInit {
 	cursorX: number;
 	cursorY: number;
 
+	public commandLineCommand: ICommandLineCommand | null;
+
+	public isCommandLineVisible: boolean;
 
 	private previousFormulaContent: string = '';
 	
@@ -33,6 +37,47 @@ export class ITFormulaEditorComponent implements OnInit {
 		this._keyboardProcessor = this._initKeyboardProcessor();
 		this.formulaDisplayElements = [];
 		this.subscribeOnKeyboardProcessorEvents();
+		this.isCommandLineVisible = false;
+		this.commandLineCommand = null;
+	}
+
+	onFocus(event: any): void {
+		this.hideCommandLine();
+	}
+
+	showCommandLine(elementIndex: number, elementCaretIndex: number): Promise<boolean> {
+		return new Promise((resolve, reject) => {
+			setTimeout(()=>{
+				var coordinates = this.caretCaretCoordinates(elementIndex, elementCaretIndex);
+				if (coordinates) {
+					this.cursorX = coordinates.left;
+					this.cursorY = coordinates.top;
+				}
+				
+				this.isCommandLineVisible = true;
+				this.visualizator.nativeElement.blur();
+				this.commandLineCommand = {};
+				resolve(true);
+			}, 4);
+		});
+	}
+
+	getCommandLineStyle(): any {
+		return {
+			"left": this.cursorX,
+			"top": this.cursorY
+		};
+	}
+
+	hideCommandLine(): void {
+		this.isCommandLineVisible = false;
+	}
+
+	setVisualizatorFocus(): any {
+		this.visualizator.nativeElement.focus();
+		setTimeout(()=> {
+			this.visualizator.nativeElement.blur();
+		}, 3000);
 	}
 
 	_initKeyboardProcessor(): KeyboardProcessor {
@@ -56,11 +101,16 @@ export class ITFormulaEditorComponent implements OnInit {
 
 	onCommandHandler(config: ICommandOperationRequest, callback: Function): void {
 		setTimeout(()=>{
-			callback({
+			this.showCommandLine(config.elementIndex, config.elementCaretIndex).then(() => {
+				
+				console.log("command line showed");
+			});
+			
+			/*callback({
 				"items": [
 					FormulaManager.generateColumnFormulaElement('Account', '7daf20bc-b4d3-470b-b5d0-1e94f55e6561', DataValueType.LOOKUP)
 				]
-			});
+			});*/
 		}, 4);
 
 		/*callback({
@@ -109,6 +159,9 @@ export class ITFormulaEditorComponent implements OnInit {
 	}
 
 	onKeyUp(event: KeyboardEvent): void {
+		if (this.isCommandLineVisible) {
+			return;
+		}
 		this.updateCursorPosition(event.currentTarget);
 	}
 
@@ -124,6 +177,61 @@ export class ITFormulaEditorComponent implements OnInit {
 			sel.removeAllRanges();
 			sel.addRange(range)
 		}
+	}
+
+	caretCaretCoordinates(elementIndex: number, elementCaretIndex: number): any {
+		var el = this.visualizator.nativeElement;
+		var targetElement: any = Array.from(el.childNodes).filter((x:any)=>x.nodeName === "SPAN")[elementIndex];
+		var temporaryElement:any = null;
+		if (!targetElement) {
+			temporaryElement = targetElement = document.createElement("span");
+			el.appendChild(temporaryElement)
+		}
+		var response = null;
+		let range = new Range();
+		range.selectNode(this.visualizator.nativeElement);
+		const rectWrap = range.getClientRects()[0];
+		if (elementCaretIndex > 0 && targetElement.childNodes.length) {
+			range.setStart(targetElement.childNodes[0], elementCaretIndex);
+		} else {
+			range.selectNode(targetElement);
+		}
+		
+		const rect = range.getClientRects()[0];
+		if (rect) {
+			response = {
+				"left": Math.max(rect.left - rectWrap.left, 0),
+				"top": Math.max(rect.top - rectWrap.top, 0)
+			}
+		}
+		if (temporaryElement) {
+			el.removeChild(temporaryElement)
+		}
+		
+
+		return response;
+		/*var sel = window.getSelection();
+		var range = document.createRange()
+		var temporaryElement = null;
+		var targetElement: any = Array.from(el.childNodes).filter((x:any)=>x.nodeName === "SPAN")[elementIndex];
+		if (!targetElement) {
+			temporaryElement = targetElement = document.createElement("span");
+			el.appendChild(temporaryElement)
+		}
+		var startWrap = targetElement.childNodes[elementIndex] || targetElement;
+		var startEl = startWrap.childNodes[0] || startWrap;
+		range.setStart(startEl, elementCaretIndex)
+		range.collapse(true)
+		if (sel != null) {
+			sel.removeAllRanges();
+			sel.addRange(range)
+		}
+		var coordinates = this.getCaretCoordinates();
+		sel?.removeAllRanges();
+		if (temporaryElement) {
+			el.removeChild(temporaryElement)
+		}
+		return coordinates;*/
 	}
 
 	updateCursorPosition(target: any): void {

@@ -10,6 +10,8 @@ export class KeyboardKeyProcessor {
 	private _keyManager: KeyManager;
 	private _caretIndex: number;
 	private _subscribes: {[key: string]: Function};
+
+	
 	
 	public get caretIndex(): number {
 		return this._caretIndex;
