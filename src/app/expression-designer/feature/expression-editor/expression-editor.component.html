@@ -2,7 +2,7 @@
     <div #visualizator class="visual-view" contenteditable="true" (keydown)="onKeyDown($event)" (keyup)="onKeyUp($event)" (paste)="onPaste($event)" (mouseup)="onMouseUp($event)" (focus)="onFocus($event)">
         <span *ngFor="let item of formulaDisplayElements" [ngClass]="item.generateVisualizatorStyleClass()">{{item.content}}</span>
     </div>
-    <app-expression-command-line *ngIf="isCommandLineVisible" ngClass="command-line" [style.left.px]="cursorX" [style.top.px]="cursorY - 3" [command]="commandLineCommand"></app-expression-command-line>
+    <app-expression-command-line *ngIf="isCommandLineVisible" ngClass="command-line" [style.left.px]="cursorX" [style.top.px]="cursorY - 3" [command]="commandLineCommand" (selectEvent)="onCommandLineResponse($event)"></app-expression-command-line>
     <div #elementsLog></div>
 </div>
 <div>

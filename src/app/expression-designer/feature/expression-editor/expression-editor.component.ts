@@ -1,7 +1,10 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { IExpressionSourceItem } from '../../data-access/expression-source-api/expression-source-service.service';
 import { DataValueType } from '../../util/enums/data-value-type.enum';
+import { ExpressionNodeType } from '../../util/enums/expression-node-type.enum';
 import { KeyboardProcessEvent } from '../common/enums/keyboard-process-event.enum';
 import { ICommandLineCommand } from '../common/interfaces/icommand-line-command';
+import { ExpressionArgument } from '../common/models/expression-argument/expression-argument';
 import { ExpressionDisplayElement } from '../common/models/expression-display-element/expression-display-element';
 import { ExpressionNodeGenerator } from '../expression-node-generator/expression-node-generator';
 import { ICommandOperationRequest, IKeyboardProcessorResponse, KeyboardProcessor } from '../keyboard-processor/keyboard-processor';
@@ -31,6 +34,8 @@ export class ExpressionEditorComponent implements OnInit {
 
 	private _keyboardProcessor: KeyboardProcessor;
 
+	private _commandLineResponseHandler: Function | null = null;
+
 	constructor() { 
 		this.cursorIndex = 0;
 		this.caretIndex = 0;
@@ -47,7 +52,7 @@ export class ExpressionEditorComponent implements OnInit {
 		this.hideCommandLine();
 	}
 
-	showCommandLine(elementIndex: number, elementCaretIndex: number): Promise<boolean> {
+	showCommandLine(elementIndex: number, elementCaretIndex: number): Promise<IExpressionSourceItem | null> {
 		return new Promise((resolve, reject) => {
 			setTimeout(()=>{
 				var coordinates = this.caretCaretCoordinates(elementIndex, elementCaretIndex);
@@ -59,9 +64,18 @@ export class ExpressionEditorComponent implements OnInit {
 				this.isCommandLineVisible = true;
 				this.visualizator.nativeElement.blur();
 				this.commandLineCommand = {};
-				resolve(true);
+				this._commandLineResponseHandler = (response: IExpressionSourceItem | null) => {
+					resolve(response);
+				}
 			}, 4);
 		});
+	}
+
+	onCommandLineResponse(response: IExpressionSourceItem | null): void {
+		this.hideCommandLine();
+		if (this._commandLineResponseHandler) {
+			this._commandLineResponseHandler.call(this, response);
+		}
 	}
 
 	getCommandLineStyle(): any {
@@ -103,9 +117,19 @@ export class ExpressionEditorComponent implements OnInit {
 
 	onCommandHandler(config: ICommandOperationRequest, callback: Function): void {
 		setTimeout(()=>{
-			this.showCommandLine(config.elementIndex, config.elementCaretIndex).then(() => {
-				
-				console.log("command line showed");
+			this.showCommandLine(config.elementIndex, config.elementCaretIndex).then((item: IExpressionSourceItem | null) => {
+
+				var items: any[] = [];
+				if (item) {
+					if (item.type === ExpressionNodeType.COLUMN) {
+						items.push(ExpressionNodeGenerator.generateColumnExpressionNode(item.title, '7daf20bc-b4d3-470b-b5d0-1e94f55e6561', item.dataValueType));
+					} else if (item.type === ExpressionNodeType.FUNCTION) {
+						items = ExpressionNodeGenerator.generateCustomFunctionExpressionNodeGroup(item.title, item.dataValueType, item.arguments?.map(x=> new ExpressionArgument(x.name, x.dataValueType)) || []);
+					}
+				}
+				callback({
+					"items": items
+				});
 			});
 			
 			/*callback({

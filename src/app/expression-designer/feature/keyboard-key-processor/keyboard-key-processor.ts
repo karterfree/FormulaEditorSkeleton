@@ -203,7 +203,7 @@ export class KeyboardKeyProcessor {
 					this._expressionManager.insertBefore(item, expressionNode);
 				});
 			} else {
-				var position = expressionNode !== null ? this._expressionManager.getElementPosition(expressionNode) : 0;
+				var position = expressionNode !== null ? this._expressionManager.getElementPosition(expressionNode) + 1 : 0;
 				response.items.reverse().forEach((item: ExpressionNode) => {
 					contentShift += item.contentLength;
 					this._expressionManager.insertAtPosition(item, position);

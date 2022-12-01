@@ -22,21 +22,25 @@
     border: 1px solid #999999;
 
     &>div {
-        padding: 0.15em 0.25em 0.15em 1em;
+        padding: 0.15em 0.25em 0.15em 1.5em;
         cursor: pointer;
         position: relative;
 
-        &:hover {
+        &.focused {
             background-color: #eeeeee;
         }
 
-        &.func::before {
+        &::before {
             position: absolute;
-            top: 0;
+            top: 4px;
             left: 0;
             font-family: 'Courier New', Courier, monospace;
             background-color: #ffffff;
             color: #999;
+            background-color: #eee;
+            border-radius: 2em;
+            width: 1.1em;
+            text-align: center;
         }
 
         &.function::before {

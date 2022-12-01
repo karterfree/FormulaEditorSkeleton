@@ -1,6 +1,4 @@
-<span #commandLine class="command-line" contenteditable="true" (paste)="onPaste($event)" (keydown)="onKeyDown($event)" (blur)="onBlur($event)"></span>
+<span #commandLine class="command-line" contenteditable="true" (paste)="onPaste($event)" (keydown)="onKeyDown($event)" (blur)="onBlur($event)" (keyup)="onKeyUp($event)"></span>
 <div class="list">
-    <div>Item 1</div>
-    <div>Item 1</div>
-    <div>Item 1</div>
+    <div *ngFor="let item of list" [ngClass]="getListItemClass(item)" (mouseover)="onMouseOverItem(item)" (click)="onSelect(item)">{{item.title}}</div>
 </div>
