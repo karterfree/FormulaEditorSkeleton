@@ -1,78 +1,15 @@
-import { Data } from "@angular/router";
-import { DataValueType } from "./enums";
-import { KeyboardKey } from "./key-construction";
-import { FormulaUtilities } from "./utils";
+import { DataValueType } from "src/app/expression-designer/util/enums/data-value-type.enum";
+import { ExpressionNodeType } from "src/app/expression-designer/util/enums/expression-node-type.enum";
+import { ExpressionUtilities } from "src/app/expression-designer/util/expression-utilities/expression-utilities";
+import { ExpressionArgument } from "../expression-argument/expression-argument";
+import { ExpressionDisplayElement } from "../expression-display-element/expression-display-element";
 
-export enum FormulaElementType {
-	UNSETTED,
-	CONSTANT,
-	SINGLEOPERATION,
-	COLUMN,
-	FUNCTION
-}
-
-export class FormulaDisplayElement {
-	content: string;
-	type: FormulaElementType;
-	dataValueType: DataValueType;
-	markedToDelete: boolean;
-
-	constructor(content: string, type: FormulaElementType, dataValueType: DataValueType) {
-		this.content = content;
-		this.type = type;
-		this.dataValueType = dataValueType;
-		this.markedToDelete = false;
-	}
-
-	public generateVisualizatorStyleClass(): string {
-		return [this._generateDateAndTypeStyleClass(), this._generateMarkedToDeleteStyleClass()].join(" ");
-	}
-
-	private _generateDateAndTypeStyleClass(): string {
-		switch (this.type) {
-			case FormulaElementType.COLUMN:
-				return "dvt-column";
-			case FormulaElementType.COLUMN:
-				return "dvt-function";
-		}
-		switch (this.dataValueType) {
-			case DataValueType.FLOAT:
-			case DataValueType.INTEGER:
-				return "dvt-number";
-			case DataValueType.TEXT:
-				return "dvt-text";
-			default:
-				return "dvt-undefined";
-		}
-	}
-	private _generateMarkedToDeleteStyleClass(): string {
-		return this.markedToDelete
-			? "marked-to-delete"
-			: ""
-		}
-}
-
-export class FormulaElementArgument {
-	name: string;
-	dataValueType: DataValueType;
-	description: string;
-	isRequired: boolean;
-
-	constructor(name: string, dataValueType: DataValueType, isRequired: boolean = true) {
-		this.name = name;
-		this.dataValueType = dataValueType;
-		this.isRequired = isRequired;
-		this.description = "";
-	}
-
-}
-
-export class FormulaElement {
-	private _type: FormulaElementType;
+export class ExpressionNode {
+	private _type: ExpressionNodeType;
 	private _dataValueType: DataValueType;
 	private _content: string;
 	private _metaPath: string;
-	private _arguments: FormulaElementArgument[];
+	private _arguments: ExpressionArgument[];
 	private _extKey: string;
 
 	private _isMarkedToDelete: boolean;
@@ -94,11 +31,11 @@ export class FormulaElement {
 		this._metaPath = metaPath;
 	}
 
-	public get type(): FormulaElementType {
+	public get type(): ExpressionNodeType {
 		return this._type;
 	}
 
-	public set type(type: FormulaElementType) {
+	public set type(type: ExpressionNodeType) {
 		if (type != this._type) {
 			this._type = type;
 		}
@@ -114,11 +51,11 @@ export class FormulaElement {
 		}
 	}
 
-	public get arguments(): FormulaElementArgument[] {
+	public get arguments(): ExpressionArgument[] {
 		return this._arguments;
 	}
 
-	public set arguments(functionArguments: FormulaElementArgument[]) {
+	public set arguments(functionArguments: ExpressionArgument[]) {
 		this._arguments = functionArguments;
 	}
 
@@ -141,7 +78,7 @@ export class FormulaElement {
 	}
 
 	constructor() {
-		this._type = FormulaElementType.UNSETTED;
+		this._type = ExpressionNodeType.UNSETTED;
 		this._dataValueType = DataValueType.UNSETTED;
 		this._content = "";
 		this._metaPath = "";
@@ -151,33 +88,33 @@ export class FormulaElement {
 		this._extKey = "";
 	}
 
-	public generateDisplayElement(): FormulaDisplayElement {
-		var displayElement = new FormulaDisplayElement(this.content, this.type, this.dataValueType);
+	public generateDisplayElement(): ExpressionDisplayElement {
+		var displayElement = new ExpressionDisplayElement(this.content, this.type, this.dataValueType);
 		displayElement.markedToDelete = this._isMarkedToDelete;
 		return displayElement;
 	}
 
 	public canChangeType(): boolean {
-		if (this.type === FormulaElementType.COLUMN) {
+		if (this.type === ExpressionNodeType.COLUMN) {
 			return false;
 		}
-		if (this.type === FormulaElementType.FUNCTION) {
+		if (this.type === ExpressionNodeType.FUNCTION) {
 			return false;
 		}
-		if (this.type === FormulaElementType.SINGLEOPERATION) {
+		if (this.type === ExpressionNodeType.SINGLEOPERATION) {
 			return false;
 		}
 		return true;
 	}
 
 	public canChangeDataValueType(): boolean {
-		if (this.type === FormulaElementType.SINGLEOPERATION) {
+		if (this.type === ExpressionNodeType.SINGLEOPERATION) {
 			return false;
 		}
-		if (this.type === FormulaElementType.FUNCTION) {
+		if (this.type === ExpressionNodeType.FUNCTION) {
 			return false;
 		}
-		if (this.type === FormulaElementType.COLUMN) {
+		if (this.type === ExpressionNodeType.COLUMN) {
 			return false;
 		}
 		return true;
@@ -211,14 +148,14 @@ export class FormulaElement {
 	}
 
 	public clone() {
-		var clone = new FormulaElement();
+		var clone = new ExpressionNode();
 		clone.content = this.content;
 		clone.type = this.type;
 		clone.dataValueType = this.dataValueType;
 		return clone;
 	}
 
-	public split(position: number): FormulaElement | null {
+	public split(position: number): ExpressionNode | null {
 		if (position > 0 && position < this.contentLength) {
 			var leftContent = this.content.slice(0, position);
 			var rightContent = this.content.slice(position);
@@ -231,37 +168,37 @@ export class FormulaElement {
 	}
 
 	public canBeSplitted(): boolean {
-		if (this.type === FormulaElementType.SINGLEOPERATION) {
+		if (this.type === ExpressionNodeType.SINGLEOPERATION) {
 			return false;
 		}
-		if (this.type === FormulaElementType.FUNCTION) {
+		if (this.type === ExpressionNodeType.FUNCTION) {
 			return false;
 		}
-		if (this.type === FormulaElementType.COLUMN) {
+		if (this.type === ExpressionNodeType.COLUMN) {
 			return false;
 		}
 		return true;
 	}
 
 	public mayBeExtendent(): boolean {
-		return this.type === FormulaElementType.COLUMN && this.dataValueType === DataValueType.LOOKUP;
+		return this.type === ExpressionNodeType.COLUMN && this.dataValueType === DataValueType.LOOKUP;
 	}
 
 	public isEmpty(): boolean {
 		return this.content === null || this.content === undefined || this.content === "";
 	}
 
-	public merge(source: FormulaElement | null): boolean {
+	public merge(source: ExpressionNode | null): boolean {
 		if (!source) {
 			return false;
 		}
-		if (source.type === FormulaElementType.SINGLEOPERATION || this.type === FormulaElementType.SINGLEOPERATION) {
+		if (source.type === ExpressionNodeType.SINGLEOPERATION || this.type === ExpressionNodeType.SINGLEOPERATION) {
 			return false;
 		}
-		if (source.type === FormulaElementType.FUNCTION || this.type === FormulaElementType.FUNCTION) {
+		if (source.type === ExpressionNodeType.FUNCTION || this.type === ExpressionNodeType.FUNCTION) {
 			return false;
 		}
-		if (source.type === FormulaElementType.COLUMN || this.type === FormulaElementType.COLUMN) {
+		if (source.type === ExpressionNodeType.COLUMN || this.type === ExpressionNodeType.COLUMN) {
 			return false;
 		}
 		this.content += source.content;
@@ -281,28 +218,28 @@ export class FormulaElement {
 	}
 
 	public canKeyEdit(): boolean {
-		if (this.type === FormulaElementType.COLUMN) {
+		if (this.type === ExpressionNodeType.COLUMN) {
 			return false;
 		}
-		if (this.type === FormulaElementType.FUNCTION) {
+		if (this.type === ExpressionNodeType.FUNCTION) {
 			return false;
 		}
-		if (this.type === FormulaElementType.SINGLEOPERATION) {
+		if (this.type === ExpressionNodeType.SINGLEOPERATION) {
 			return false;
 		}
 		return true;
 	}
 
 	public isColumn(): boolean {
-		return this.type === FormulaElementType.COLUMN;
+		return this.type === ExpressionNodeType.COLUMN;
 	}
 
 	public isExtendent(): boolean {
-		return !FormulaUtilities.isEmpty(this.metaPath) && this.metaPath.indexOf(".") >= 0;
+		return !ExpressionUtilities.isEmpty(this.metaPath) && this.metaPath.indexOf(".") >= 0;
 	}
 
-	public isJoinedWith(nextFormulaElement: FormulaElement): boolean {
-		return nextFormulaElement != null && !FormulaUtilities.isEmpty(this.extKey) && nextFormulaElement.extKey === this.extKey;
+	public isJoinedWith(nextExpressionNode: ExpressionNode): boolean {
+		return nextExpressionNode != null && !ExpressionUtilities.isEmpty(this.extKey) && nextExpressionNode.extKey === this.extKey;
 	}
 
 	public markToDelete(): void {
@@ -316,23 +253,20 @@ export class FormulaElement {
 	}
 
 	public canRemoveOperationWithoutMark(): boolean {
-		if (this.type === FormulaElementType.COLUMN) {
+		if (this.type === ExpressionNodeType.COLUMN) {
 			return false;
 		}
-		if (this.type === FormulaElementType.FUNCTION) {
+		if (this.type === ExpressionNodeType.FUNCTION) {
 			return false;
 		}
 		return true;
 	}
 
-	
-
 	public froceGetExtKey(): string {
-		if (FormulaUtilities.isEmpty(this.extKey)) {
-			this.extKey = FormulaUtilities.generateGUID();
+		if (ExpressionUtilities.isEmpty(this.extKey)) {
+			this.extKey = ExpressionUtilities.generateGUID();
 		}
 		return this.extKey;
 	}
 
 }
-

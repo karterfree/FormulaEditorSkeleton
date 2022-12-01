@@ -1,17 +1,14 @@
 import { Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
-
-export interface ICommandLineCommand {
-
-}
+import { ICommandLineCommand } from '../common/interfaces/icommand-line-command';
 
 @Component({
-	selector: 'app-itformula-editor-command-line',
-	templateUrl: './itformula-editor-command-line.component.html',
-	styleUrls: ['./itformula-editor-command-line.component.less']
+  selector: 'app-expression-command-line',
+  templateUrl: './expression-command-line.component.html',
+  styleUrls: ['./expression-command-line.component.less']
 })
-export class ITFormulaEditorCommandLineComponent implements OnInit {
+export class ExpressionCommandLineComponent implements OnInit {
 
-	@ViewChild('commandLine') commandLine!: ElementRef;
+  @ViewChild('commandLine') commandLine!: ElementRef;
 
 	private _command: ICommandLineCommand | null;
 	@Input()
@@ -51,4 +48,5 @@ export class ITFormulaEditorCommandLineComponent implements OnInit {
 	onBlur(event:any): void {
 		
 	}
+
 }

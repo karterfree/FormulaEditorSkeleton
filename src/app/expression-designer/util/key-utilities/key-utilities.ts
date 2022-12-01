@@ -1,121 +1,13 @@
-export enum KeyMode {
-	IGNORED = 0,
-	DISABLED = 1,
-	ENABLED = 2
-}
+import { KeyUsageMode } from "../enums/key-usage-mode.enum";
+import { KeyboardKey } from "../enums/keyboard-key.enum";
+import { KeyItem } from "../models/key-item";
 
-
-export class KeyItem {
-	key: string = '';
-	ctrMode: KeyMode;
-	altMode: KeyMode;
-	shiftMode: KeyMode;
-	numlockMode: KeyMode;
-
-	constructor(key: string, 
-		ctrMode: KeyMode = KeyMode.IGNORED,
-		altMode: KeyMode = KeyMode.IGNORED,
-		shiftMode: KeyMode = KeyMode.IGNORED,
-		numlockMode: KeyMode = KeyMode.IGNORED) {
-		this.key = key;
-		this.ctrMode = ctrMode;
-		this.altMode = altMode;
-		this.shiftMode = shiftMode;
-		this.numlockMode = numlockMode;
-	}
-
-	static fromKeyboardEvent(event: KeyboardEvent): KeyItem {
-		var keyItem = new KeyItem(event.key);
-		keyItem.ctrMode = event.ctrlKey ? KeyMode.ENABLED : KeyMode.DISABLED;
-		keyItem.altMode = event.altKey ? KeyMode.ENABLED : KeyMode.DISABLED;
-		keyItem.shiftMode = event.shiftKey ? KeyMode.ENABLED : KeyMode.DISABLED;
-		keyItem.numlockMode = event.getModifierState("NumLock") ? KeyMode.ENABLED : KeyMode.DISABLED;
-		return keyItem;
-	}
-
-	public equal(templateEventItem: KeyItem): boolean {
-		var response = this.key === templateEventItem.key;
-		if (templateEventItem.ctrMode !== KeyMode.IGNORED) {
-			response = response && this.ctrMode == templateEventItem.ctrMode;
-		}
-		if (templateEventItem.shiftMode !== KeyMode.IGNORED) {
-			response = response && this.shiftMode == templateEventItem.shiftMode;
-		}
-		if (templateEventItem.altMode !== KeyMode.IGNORED) {
-			response = response && this.altMode == templateEventItem.altMode;
-		}
-		if (templateEventItem.numlockMode !== KeyMode.IGNORED) {
-			response = response && this.numlockMode == templateEventItem.numlockMode;
-		}
-		return response;
-	}
-}
-
-export enum KeyboardKey {
-	b = "b",
-	i = "i",
-	u = "u",
-	s = "s",
-	o = "o",
-	v = "v",
-	x = "x",
-	z = "z",
-	Control = "Control",
-	Shift = "Shift",
-	Alt = "Alt",
-	ScrollLock = "ScrollLock",
-	Meta = "Meta",
-	ContextMenu = "ContextMenu",
-	NumLock = "NumLock",
-	PageUp = "PageUp",
-	PageDown = "PageDown",
-	Clear = "Clear",
-	Insert = "Insert",
-	Pause = "Pause",
-	Tab = "Tab",
-	CapsLock = "CapsLock",
-	ArrowLeft = "ArrowLeft",
-	ArrowRight = "ArrowRight",
-	ArrowUp = "ArrowUp",
-	ArrowDown = "ArrowDown",
-	End = "End",
-	Home = "Home",
-	F1 = "F1",
-	F2 = "F2",
-	F3 = "F3",
-	F4 = "F4",
-	F5 = "F5",
-	F6 = "F6",
-	F7 = "F7",
-	F8 = "F8",
-	F9 = "F9",
-	F10 = "F10",
-	F11 = "F11",
-	F12 = "F12",
-	Delete = "Delete",
-	Backspace = "Backspace",
-	BracketOpen = "(",
-	BracketClose = ")",
-	Add = "+",
-	Subtract = "-",
-	Divide = "/",
-	Multiply = "*",
-	Greater = ">",
-	Less = "<",
-	Equal = "=",
-	Not = "!",
-	AtSign = "@",
-    Comma = ",",
-	Dot = "."
-}
-
-
-export class KeyManager {
+export class KeyUtilities {
 	private _deniedKeys: KeyItem[] = [
-		new KeyItem(KeyboardKey.b, KeyMode.ENABLED),
-		new KeyItem(KeyboardKey.i, KeyMode.ENABLED),
-		new KeyItem(KeyboardKey.u, KeyMode.ENABLED),
-		new KeyItem(KeyboardKey.z, KeyMode.ENABLED),
+		new KeyItem(KeyboardKey.b, KeyUsageMode.ENABLED),
+		new KeyItem(KeyboardKey.i, KeyUsageMode.ENABLED),
+		new KeyItem(KeyboardKey.u, KeyUsageMode.ENABLED),
+		new KeyItem(KeyboardKey.z, KeyUsageMode.ENABLED),
 		new KeyItem(KeyboardKey.Control),
 		new KeyItem(KeyboardKey.Shift),
 		new KeyItem(KeyboardKey.Alt),
@@ -131,10 +23,10 @@ export class KeyManager {
 		new KeyItem(KeyboardKey.Tab),
 		new KeyItem(KeyboardKey.CapsLock),
 
-		new KeyItem(KeyboardKey.o, KeyMode.ENABLED),
-		new KeyItem(KeyboardKey.s, KeyMode.ENABLED),
-		new KeyItem(KeyboardKey.x, KeyMode.ENABLED),
-		new KeyItem(KeyboardKey.v, KeyMode.ENABLED),
+		new KeyItem(KeyboardKey.o, KeyUsageMode.ENABLED),
+		new KeyItem(KeyboardKey.s, KeyUsageMode.ENABLED),
+		new KeyItem(KeyboardKey.x, KeyUsageMode.ENABLED),
+		new KeyItem(KeyboardKey.v, KeyUsageMode.ENABLED),
 	];
 
 	private _moveKeys: KeyItem[] = [
@@ -190,7 +82,7 @@ export class KeyManager {
 	];
 
 	private _commandKeys: KeyItem[] = [
-		new KeyItem(KeyboardKey.AtSign, KeyMode.IGNORED, KeyMode.IGNORED, KeyMode.ENABLED),
+		new KeyItem(KeyboardKey.AtSign, KeyUsageMode.IGNORED, KeyUsageMode.IGNORED, KeyUsageMode.ENABLED),
 	];
 
 	private has(keyItem: KeyItem, list: KeyItem[]): boolean {
@@ -244,4 +136,3 @@ export class KeyManager {
 		return this.has(keyItem, this._commandKeys);
 	}
 }
-

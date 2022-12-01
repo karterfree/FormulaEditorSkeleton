@@ -24,9 +24,28 @@
     &>div {
         padding: 0.15em 0.25em 0.15em 1em;
         cursor: pointer;
+        position: relative;
 
         &:hover {
             background-color: #eeeeee;
         }
+
+        &.func::before {
+            position: absolute;
+            top: 0;
+            left: 0;
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #ffffff;
+            color: #999;
+        }
+
+        &.function::before {
+            content: 'f';
+        }
+
+        &.column::before {
+            content: 'c';
+        }
+
     }
 }

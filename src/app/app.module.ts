@@ -3,20 +3,21 @@ import { BrowserModule } from '@angular/platform-browser';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { ITFormulaEditorComponent } from './itformula-editor/itformula-editor.component';
-import { ITFormulaEditorCommandLineComponent } from './itformula-editor-command-line/itformula-editor-command-line.component';
+import { ExpressionEditorComponent } from './expression-designer/feature/expression-editor/expression-editor.component';
+import { ExpressionCommandLineComponent } from './expression-designer/feature/expression-command-line/expression-command-line.component';
 
 @NgModule({
   declarations: [
     AppComponent,
-    ITFormulaEditorComponent,
-    ITFormulaEditorCommandLineComponent
+    ExpressionEditorComponent,
+    ExpressionCommandLineComponent
   ],
   imports: [
     BrowserModule,
     AppRoutingModule
   ],
-  providers: [],
+  providers: [
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

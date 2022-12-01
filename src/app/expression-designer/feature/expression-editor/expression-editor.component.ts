@@ -1,17 +1,19 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import { ICommandLineCommand } from '../itformula-editor-command-line/itformula-editor-command-line.component';
-import { DataValueType } from './enums';
-import { FormulaDisplayElement} from './formula-construction';
-import { FormulaManager } from './formula-manager';
-import { ICommandOperationRequest, IKeyboardProcessorResponse, KeyboardProcessEvent, KeyboardProcessor } from './keyboard-processor';
+import { DataValueType } from '../../util/enums/data-value-type.enum';
+import { KeyboardProcessEvent } from '../common/enums/keyboard-process-event.enum';
+import { ICommandLineCommand } from '../common/interfaces/icommand-line-command';
+import { ExpressionDisplayElement } from '../common/models/expression-display-element/expression-display-element';
+import { ExpressionNodeGenerator } from '../expression-node-generator/expression-node-generator';
+import { ICommandOperationRequest, IKeyboardProcessorResponse, KeyboardProcessor } from '../keyboard-processor/keyboard-processor';
 
 @Component({
-	selector: 'app-itformula-editor',
-	templateUrl: './itformula-editor.component.html',
-	styleUrls: ['./itformula-editor.component.less']
+  selector: 'app-expression-editor',
+  templateUrl: './expression-editor.component.html',
+  styleUrls: ['./expression-editor.component.less']
 })
-export class ITFormulaEditorComponent implements OnInit {
-	@ViewChild('visualizator') visualizator!: ElementRef;
+export class ExpressionEditorComponent implements OnInit {
+
+  @ViewChild('visualizator') visualizator!: ElementRef;
 	@ViewChild('elementsLog') elementsLog!: ElementRef;
 	
 	caretIndex: number;
@@ -25,7 +27,7 @@ export class ITFormulaEditorComponent implements OnInit {
 
 	private previousFormulaContent: string = '';
 	
-	formulaDisplayElements: FormulaDisplayElement[];
+	formulaDisplayElements: ExpressionDisplayElement[];
 
 	private _keyboardProcessor: KeyboardProcessor;
 
@@ -133,7 +135,7 @@ export class ITFormulaEditorComponent implements OnInit {
 	onExtendendHandler(config: any, callback: Function): void {
 		callback({
 			"items": [
-				FormulaManager.generateColumnFormulaElement('Amount', '8daf20bc-b4d3-470b-b5d0-1e94f55e6562', DataValueType.FLOAT)
+				ExpressionNodeGenerator.generateColumnExpressionNode('Amount', '8daf20bc-b4d3-470b-b5d0-1e94f55e6562', DataValueType.FLOAT)
 			]
 		});
 	}
@@ -297,4 +299,5 @@ export class ITFormulaEditorComponent implements OnInit {
 		}
 		return { x, y };
 	}
+
 }

@@ -1,5 +1,3 @@
-
-
 export enum DataValueType {
 	UNSETTED = -1,
 	GUID = 0,

@@ -1,0 +1,10 @@
+export enum ExpressionNodeType {
+	UNSETTED,
+	CONSTANT,
+	SINGLEOPERATION,
+	COLUMN,
+	FUNCTION,
+	SYSTEM_SETTING,
+    SYSTEM_VALUE,
+    VARIABLE
+}

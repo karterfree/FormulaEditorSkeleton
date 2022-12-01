@@ -1,14 +1,8 @@
-import { Observable } from "rxjs";
-import { FormulaDisplayElement, FormulaElement } from "./formula-construction";
-import { FormulaManager } from "./formula-manager";
-import { KeyboardKeyProcessor } from "./keyboard-key-processor";
-
-
-export enum KeyboardProcessEvent {
-	FINISH = "Finish",
-	COMMAND = "Command",
-	EXTENDENT = "Extendent"
-}
+import { KeyboardProcessEvent } from "../common/enums/keyboard-process-event.enum";
+import { ExpressionDisplayElement } from "../common/models/expression-display-element/expression-display-element";
+import { ExpressionNode } from "../common/models/expression-node/expression-node";
+import { ExpressionManager } from "../expression-manager/expression-manager";
+import { KeyboardKeyProcessor } from "../keyboard-key-processor/keyboard-key-processor";
 
 export interface IBaseProcessorRequest {
 	elementIndex: number;
@@ -16,7 +10,7 @@ export interface IBaseProcessorRequest {
 }
 
 export interface IKeyboardProcessorResponse extends IBaseProcessorRequest {
-	displayList: FormulaDisplayElement[]
+	displayList: ExpressionDisplayElement[]
 }
 
 export interface IExtendColumnRequest extends IBaseProcessorRequest {
@@ -25,7 +19,7 @@ export interface IExtendColumnRequest extends IBaseProcessorRequest {
 }
 
 export interface IExtendColumnResponse {
-	items: FormulaElement[],
+	items: ExpressionNode[],
 }
 
 export interface ICommandOperationRequest extends IBaseProcessorRequest {
@@ -33,7 +27,7 @@ export interface ICommandOperationRequest extends IBaseProcessorRequest {
 }
 
 export interface ICommandOperationResponse {
-	items: FormulaElement[],
+	items: ExpressionNode[],
 	caretIndexShift?: number;
 }
 
@@ -42,15 +36,15 @@ export class KeyboardProcessor {
 	private _inProcess: boolean;
 	private _subscribes: {[key: string]: Function};
 	
-	private _formulaManager: FormulaManager;
+	private _expressionManager: ExpressionManager;
 	private _keyboardKeyProcessor: KeyboardKeyProcessor;
 	
 	constructor() {
 		this._events = [];
 		this._inProcess = false;
 		this._subscribes = {};
-		this._formulaManager = new FormulaManager();
-		this._keyboardKeyProcessor = new KeyboardKeyProcessor(this._formulaManager);
+		this._expressionManager = new ExpressionManager();
+		this._keyboardKeyProcessor = new KeyboardKeyProcessor(this._expressionManager);
 
 		this._subscribeOnKeyboardKeyProcessorEvents();
 	}
@@ -84,7 +78,7 @@ export class KeyboardProcessor {
 	}
 
 	private _onEventDispatched(iterator: number) {
-		this._formulaManager.removeEmptyElements();
+		this._expressionManager.removeEmptyElements();
 		this._inProcess = false;
 		this._dispatchNextEvent(iterator + 1);
 	}
@@ -120,13 +114,13 @@ export class KeyboardProcessor {
 	}
 
 	private _invokeFinishHendler() {
-		this._formulaManager.actualizeFormulaElementsDataValueType();
+		this._expressionManager.actualizeExpressionNodesDataValueType();
 		var caretIndex: number = this._keyboardKeyProcessor.caretIndex;
-		var caretDomPosition = this._formulaManager.getCaretDomPosition(caretIndex);
+		var caretDomPosition = this._expressionManager.getCaretDomPosition(caretIndex);
 		this._callHandler(KeyboardProcessEvent.FINISH, {
 			"elementIndex": caretDomPosition.elementIndex,
 			"elementCaretIndex": caretDomPosition.elementCaretIndex,
-			"displayList": this._formulaManager.generateFormulaDisplayElementList()
+			"displayList": this._expressionManager.generateExpressionDisplayElementList()
 		});
 	}
 
@@ -151,6 +145,6 @@ export class KeyboardProcessor {
 	}
 
 	public getSerializedElements(): string {
-		return this._formulaManager.getSerializedElements();
+		return this._expressionManager.getSerializedElements();
 	}
 }
