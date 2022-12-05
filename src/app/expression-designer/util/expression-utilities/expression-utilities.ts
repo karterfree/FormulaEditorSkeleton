@@ -1,3 +1,5 @@
+import { ExpressionNodeType } from "../enums/expression-node-type.enum";
+
 export class ExpressionUtilities {
     public static isEmpty(value: any): boolean {
 		return value === null || value === undefined || value === '' || (Array.isArray(value) && !value.length);
@@ -10,5 +12,18 @@ export class ExpressionUtilities {
 
 	private static uuidPart(): string {
 		return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+	}
+
+	public static isReferenseable(type: ExpressionNodeType): boolean {
+		switch (type) {
+			case ExpressionNodeType.COLUMN:
+			case ExpressionNodeType.FUNCTION:
+			case ExpressionNodeType.SYSTEM_SETTING:
+			case ExpressionNodeType.SYSTEM_VALUE:
+			case ExpressionNodeType.VARIABLE:
+				return true;
+			default:
+				return false;
+		}
 	}
 }
