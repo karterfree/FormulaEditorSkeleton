@@ -207,7 +207,7 @@ export class ExpressionEditorComponent implements OnInit {
 
 	caretCaretCoordinates(elementIndex: number, elementCaretIndex: number): any {
 		var el = this.visualizator.nativeElement;
-		var targetElement: any = Array.from(el.childNodes).filter((x:any)=>x.nodeName === "SPAN")[elementIndex];
+		var targetElement: any = Array.from(el.childNodes).filter((x:any)=>x.nodeName === "pre")[elementIndex];
 		var temporaryElement:any = null;
 		if (!targetElement) {
 			temporaryElement = targetElement = document.createElement("span");
@@ -233,31 +233,7 @@ export class ExpressionEditorComponent implements OnInit {
 		if (temporaryElement) {
 			el.removeChild(temporaryElement)
 		}
-		
-
 		return response;
-		/*var sel = window.getSelection();
-		var range = document.createRange()
-		var temporaryElement = null;
-		var targetElement: any = Array.from(el.childNodes).filter((x:any)=>x.nodeName === "SPAN")[elementIndex];
-		if (!targetElement) {
-			temporaryElement = targetElement = document.createElement("span");
-			el.appendChild(temporaryElement)
-		}
-		var startWrap = targetElement.childNodes[elementIndex] || targetElement;
-		var startEl = startWrap.childNodes[0] || startWrap;
-		range.setStart(startEl, elementCaretIndex)
-		range.collapse(true)
-		if (sel != null) {
-			sel.removeAllRanges();
-			sel.addRange(range)
-		}
-		var coordinates = this.getCaretCoordinates();
-		sel?.removeAllRanges();
-		if (temporaryElement) {
-			el.removeChild(temporaryElement)
-		}
-		return coordinates;*/
 	}
 
 	updateCursorPosition(target: any): void {

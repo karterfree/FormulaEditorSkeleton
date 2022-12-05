@@ -143,6 +143,9 @@ export class KeyboardKeyProcessor {
 			this.processExtendendOpertion(keyItem, prevExpressionNode);
 			return;
 		}
+		if (keyItem.key === KeyboardKey.Space && !expressionNode.isEditableString()) {
+			return;
+		}
 		if (keyItem.key === '"' && expressionNode.isEmpty() && (expressionNode.type === ExpressionNodeType.UNSETTED ||
             (expressionNode.type === ExpressionNodeType.CONSTANT && (expressionNode.dataValueType === DataValueType.UNSETTED ||
                 expressionNode.dataValueType === DataValueType.TEXT)))) {
