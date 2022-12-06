@@ -16,6 +16,7 @@ export class ExpressionUtilities {
 
 	public static isReferenseable(type: ExpressionNodeType): boolean {
 		switch (type) {
+			case ExpressionNodeType.UNSETTED:
 			case ExpressionNodeType.COLUMN:
 			case ExpressionNodeType.FUNCTION:
 			case ExpressionNodeType.SYSTEM_SETTING:

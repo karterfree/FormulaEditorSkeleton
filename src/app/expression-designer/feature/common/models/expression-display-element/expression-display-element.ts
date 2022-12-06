@@ -1,5 +1,6 @@
 import { DataValueType } from "src/app/expression-designer/util/enums/data-value-type.enum";
 import { ExpressionNodeType } from "src/app/expression-designer/util/enums/expression-node-type.enum";
+import { ExpressionUtilities } from "src/app/expression-designer/util/expression-utilities/expression-utilities";
 
 export class ExpressionDisplayElement {
 	content: string;
@@ -15,18 +16,42 @@ export class ExpressionDisplayElement {
 	}
 
 	public generateVisualizatorStyleClass(): string {
-		return [this._generateDateAndTypeStyleClass(), this._generateMarkedToDeleteStyleClass()].join(" ");
+		var response = [this._generateMarkedToDeleteStyleClass()];
+		response.push(this._generateTypeStyleClass());
+		response.push(this._generateOperationStyleClass());
+		if (this.type === ExpressionNodeType.CONSTANT) {
+			response.push(this._generateDataValueTypeStyleClass());
+		}
+		
+		return response.join(" ");
 	}
 
-	private _generateDateAndTypeStyleClass(): string {
+	private _generateOperationStyleClass(): string {
+		if (this.type === ExpressionNodeType.SINGLEOPERATION) {
+			return "s-op";
+		}
+		return "";
+	}
+
+	private _generateTypeStyleClass(): string {
 		switch (this.type) {
 			case ExpressionNodeType.COLUMN:
-				return "dvt-column";
+				return "nt nt-column";
 			case ExpressionNodeType.FUNCTION:
-				return "dvt-function";
-            case ExpressionNodeType.VARIABLE:
-                return "dvt-function";
+				return "nt nt-function";
+			case ExpressionNodeType.VARIABLE:
+				return "nt nt-variable";
+			case ExpressionNodeType.SYSTEM_SETTING:
+				return "nt nt-syssetting";
+			case ExpressionNodeType.SYSTEM_VALUE:
+				return "nt nt-sysvalue";
+			case ExpressionNodeType.UNSETTED:
+				return "nt nt-undefined";
 		}
+		return ""
+	}
+
+	private _generateDataValueTypeStyleClass(): string {
 		switch (this.dataValueType) {
 			case DataValueType.FLOAT:
 			case DataValueType.INTEGER:

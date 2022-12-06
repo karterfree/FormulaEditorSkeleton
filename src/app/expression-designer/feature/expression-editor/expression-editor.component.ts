@@ -207,7 +207,7 @@ export class ExpressionEditorComponent implements OnInit {
 
 	caretCaretCoordinates(elementIndex: number, elementCaretIndex: number): any {
 		var el = this.visualizator.nativeElement;
-		var targetElement: any = Array.from(el.childNodes).filter((x:any)=>x.nodeName === "pre")[elementIndex];
+		var targetElement: any = Array.from(el.childNodes).filter((x:any)=>x.nodeName === "PRE")[elementIndex];
 		var temporaryElement:any = null;
 		if (!targetElement) {
 			temporaryElement = targetElement = document.createElement("span");
