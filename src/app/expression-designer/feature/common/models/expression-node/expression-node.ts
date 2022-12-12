@@ -1,3 +1,4 @@
+import { IExpressionSourceItem } from "src/app/expression-designer/data-access/expression-source-api/expression-source-service.service";
 import { DataValueType } from "src/app/expression-designer/util/enums/data-value-type.enum";
 import { ExpressionNodeType } from "src/app/expression-designer/util/enums/expression-node-type.enum";
 import { ExpressionUtilities } from "src/app/expression-designer/util/expression-utilities/expression-utilities";
@@ -7,21 +8,29 @@ import { ExpressionDisplayElement } from "../expression-display-element/expressi
 export class ExpressionNode {
 	private _type: ExpressionNodeType;
 	private _dataValueType: DataValueType;
-	private _content: string;
+	private _title: string;
 	private _metaPath: string;
 	private _arguments: ExpressionArgument[];
 	private _extKey: string;
 	private _inEditStatus: boolean;
-
+	private _backup: ExpressionNode | null;
+	private _code: string;
 	private _isMarkedToDelete: boolean;
-	private _deleteFrom: number;
 
-	public get content() {
-		return this._content;
+	public get title() {
+		return this._title;
 	}
 
-	public set content(content: string) {
-		this._content = content;
+	public set title(value: string) {
+		this._title = value;
+	}
+
+	public get code() {
+		return this._code;
+	}
+
+	public set code(value: string) {
+		this._code = value;
 	}
 
 	public get metaPath() {
@@ -39,6 +48,9 @@ export class ExpressionNode {
 	public set inEditStatus(value: boolean) {
 		if (value != this._inEditStatus) {
 			this._inEditStatus = value;
+			if (value) {
+				this._backupExpressionNodeContent();
+			}
 		}
 	}
 
@@ -71,7 +83,7 @@ export class ExpressionNode {
 	}
 
 	public get contentLength(): number {
-		return this.content.length;
+		return this.title.length;
 	}
 
 	public get isMarkedToDelete(): boolean {
@@ -91,17 +103,55 @@ export class ExpressionNode {
 	constructor() {
 		this._type = ExpressionNodeType.UNSETTED;
 		this._dataValueType = DataValueType.UNSETTED;
-		this._content = "";
+		this._title = "";
 		this._metaPath = "";
 		this._arguments = [];
 		this._isMarkedToDelete = false;
-		this._deleteFrom = 0;
 		this._extKey = "";
 		this._inEditStatus = false;
+		this._backup = null;
+		this._code = "";
+	}
+
+	private _backupExpressionNodeContent() {
+		this._backup = this.clone();
+		this._clear();
+	}
+
+	public applyNodeData(sourceNode: IExpressionSourceItem) {
+		this.title = sourceNode.title;
+		this.code = sourceNode.code;
+		this.type = sourceNode.type;
+		this.dataValueType = sourceNode.dataValueType;
+		this.arguments = [...(sourceNode.arguments || [])];
+		this._backup = null;
+		this.inEditStatus = false;
+	}
+
+	public restoreNodeData() {
+		if (this._backup !== null) {
+			this.title = this._backup.title;
+			this.code = this._backup.code;
+			this.type = this._backup.type;
+			this.dataValueType = this._backup.dataValueType;
+			this.arguments = [...this._backup.arguments];
+		} else {
+			this.title = "";
+			this._clear();
+		}
+		this._backup = null;
+		this.inEditStatus = false;
+	}
+
+	private _clear() {
+		this.code = "";
+		this.type = ExpressionNodeType.UNSETTED;
+		this.dataValueType = DataValueType.UNSETTED;
+		this.arguments = [];
 	}
 
 	public generateDisplayElement(): ExpressionDisplayElement {
-		var displayElement = new ExpressionDisplayElement(this.content, this.type, this.dataValueType);
+		var displayElement = new ExpressionDisplayElement(this.title, this.type, this.dataValueType);
 		displayElement.markedToDelete = this._isMarkedToDelete;
 		return displayElement;
 	}
@@ -139,19 +189,19 @@ export class ExpressionNode {
 	}
 
 	public append(char: string): void {
-		this._content += char;
+		this.title += char;
 	}
 
 	public insertAt(char: string, position: number): void {
-		if (position > this.content.length) {
+		if (position > this.title.length) {
 			return this.append(char);
 		}
-		this.content = [this.content.slice(0, position), char, this.content.slice(position)].join('');
+		this.title = [this.title.slice(0, position), char, this.title.slice(position)].join('');
 	}
 
 	public removeByBackspace(position: number): boolean {
 		if (position > 0) {
-			this.content = [this.content.slice(0, position-1), this.content.slice(position)].join('');
+			this.title = [this.title.slice(0, position-1), this.title.slice(position)].join('');
 			return true;
 		}
 		return false;
@@ -159,7 +209,7 @@ export class ExpressionNode {
 
 	public removeByDelete(position: number): boolean {
 		if (position < this.contentLength) {
-			this.content = [this.content.slice(0, position), this.content.slice(position + 1)].join('');
+			this.title = [this.title.slice(0, position), this.title.slice(position + 1)].join('');
 			return true;
 		}
 		return false;
@@ -167,19 +217,22 @@ export class ExpressionNode {
 
 	public clone() {
 		var clone = new ExpressionNode();
-		clone.content = this.content;
+		clone.title = this.title;
+		clone.code = this.code;
 		clone.type = this.type;
 		clone.dataValueType = this.dataValueType;
+		clone.arguments = [...this.arguments];
+		clone.arguments = [...this.arguments];
 		return clone;
 	}
 
 	public split(position: number): ExpressionNode | null {
 		if (position > 0 && position < this.contentLength) {
-			var leftContent = this.content.slice(0, position);
-			var rightContent = this.content.slice(position);
+			var leftContent = this.title.slice(0, position);
+			var rightContent = this.title.slice(position);
 			var clone = this.clone();
-			clone.content = rightContent;
-			this.content = leftContent;
+			clone.title = rightContent;
+			this.title = leftContent;
 			return clone;
 		}
 		return null;
@@ -203,7 +256,7 @@ export class ExpressionNode {
 	}
 
 	public isEmpty(): boolean {
-		return this.content === null || this.content === undefined || this.content === "";
+		return this.title === null || this.title === undefined || this.title === "";
 	}
 
 	public merge(source: ExpressionNode | null): boolean {
@@ -219,7 +272,7 @@ export class ExpressionNode {
 		if (source.type === ExpressionNodeType.COLUMN || this.type === ExpressionNodeType.COLUMN) {
 			return false;
 		}
-		this.content += source.content;
+		this.title += source.title;
 		return true;
 	}
 
@@ -267,7 +320,6 @@ export class ExpressionNode {
 
 	public unMarkToDelete(): void {
 		this._isMarkedToDelete = false;
-		this._deleteFrom = 0;
 	}
 
 	public canRemoveOperationWithoutMark(): boolean {

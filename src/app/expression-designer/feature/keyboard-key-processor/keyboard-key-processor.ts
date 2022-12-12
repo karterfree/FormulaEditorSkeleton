@@ -77,7 +77,9 @@ export class KeyboardKeyProcessor {
 				expressionNode.inEditStatus = true;
 				this._markNextChainNodesToDelete(expressionNode);
 			}
-
+			expressionNode.removeByBackspace(this._expressionManager.getExpressionNodeCaretIndex(expressionNode, this.caretIndex))
+			this.caretIndex--;
+			
 			/*if (expressionNode.isMarkedToDelete) {
 				this._removeMarkedElements();
 			} else if (this._canRemoveOperationWithoutMark(expressionNode)) {
@@ -117,7 +119,7 @@ export class KeyboardKeyProcessor {
 
 	private _markToDeleteFrom(expressionNode: ExpressionNode) {
 		var prevExpressionNode = this._expressionManager.getPrevElement(expressionNode);
-		if (expressionNode.isColumn() && prevExpressionNode != null && expressionNode.isJoinedWith(prevExpressionNode) && prevExpressionNode.content === KeyboardKey.Dot) {
+		if (expressionNode.isColumn() && prevExpressionNode != null && expressionNode.isJoinedWith(prevExpressionNode) && prevExpressionNode.title === KeyboardKey.Dot) {
 			expressionNode = prevExpressionNode;
 		}
 		expressionNode.markToDelete();
@@ -214,14 +216,14 @@ export class KeyboardKeyProcessor {
 		var prevNode = this._expressionManager.getPrevElement(this._expressionManager.activeNode);
 		if (prevNode != null && prevNode.isJoinedWith(this._expressionManager.activeNode)) {
 			return {
-				titlePart: this._expressionManager.activeNode.content,
+				titlePart: this._expressionManager.activeNode.title,
 				comparisonType: ComparisonType.START_WITH,
 				availableTypes: [ExpressionNodeType.COLUMN],
 				referenceSchemaUId: ''
 			}
 		}
 		return {
-			titlePart: this._expressionManager.activeNode.content,
+			titlePart: this._expressionManager.activeNode.title,
 			comparisonType: ComparisonType.START_WITH,
 			availableTypes: [],
 			referenceSchemaUId: ''
@@ -301,11 +303,7 @@ export class KeyboardKeyProcessor {
 			return false;
 		}
 		var targetPosition = this._expressionManager.getActualExpressionNodeCaretIndex(activeNode, 0);
-		activeNode.content = complexItem.title;
-		activeNode.type = complexItem.type;
-		activeNode.dataValueType = complexItem.dataValueType;
-		activeNode.arguments = complexItem.arguments || [];
-		activeNode.inEditStatus = false;
+		activeNode.applyNodeData(complexItem);
 		this.caretIndex = targetPosition + activeNode.contentLength;
 		if (activeNode.type === ExpressionNodeType.FUNCTION) {
 			var additionalNodes = ExpressionNodeGenerator.generateCustomFunctionArgumentsExpressionNodeGroup(activeNode.arguments);

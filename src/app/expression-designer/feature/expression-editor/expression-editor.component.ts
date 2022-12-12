@@ -11,7 +11,7 @@ import { ICommandOperationRequest, IKeyboardProcessorResponse, KeyboardProcessor
 
 class ExpressionComplexListItem implements IExpressionSourceItem {
 	title: string;
-	name: string;
+	code: string;
 	type: ExpressionNodeType;
 	dataValueType: DataValueType;
 	arguments?: ExpressionArgument[];
@@ -20,7 +20,7 @@ class ExpressionComplexListItem implements IExpressionSourceItem {
 
 	constructor(item: IExpressionSourceItem) {
 		this.title = item.title;
-		this.name = item.name;
+		this.code = item.code;
 		this.type = item.type;
 		this.dataValueType = item.dataValueType;
 		if (item.arguments) {
@@ -31,7 +31,7 @@ class ExpressionComplexListItem implements IExpressionSourceItem {
 	getExpressionSourceItem(): IExpressionSourceItem {
 		return {
 			title: this.title,
-			name: this.name,
+			code: this.code,
 			type: this.type,
 			dataValueType: this.dataValueType,
 			arguments: this.arguments
@@ -209,11 +209,11 @@ export class ExpressionEditorComponent implements OnInit {
 	}
 
 	onExtendendHandler(config: any, callback: Function): void {
-		callback({
+		/*callback({
 			"items": [
 				ExpressionNodeGenerator.generateColumnExpressionNode('Amount', '8daf20bc-b4d3-470b-b5d0-1e94f55e6562', DataValueType.FLOAT)
 			]
-		});
+		});*/
 	}
 
 	ngOnInit(): void {

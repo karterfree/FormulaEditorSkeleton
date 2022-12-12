@@ -8,7 +8,7 @@ import { ExpressionUtilities } from '../../util/expression-utilities/expression-
 
 export interface IExpressionSourceItem {
 	title: string,
-	name: string,
+	code: string,
 	type: ExpressionNodeType,
 	dataValueType: DataValueType,
 	arguments?: ExpressionArgument[]
@@ -28,17 +28,17 @@ export class ExpressionSourceServiceService {
 
 	mockList: IExpressionSourceItem[] = [{
 		title: "Account",
-		name: "Account",
+		code: "Account",
 		type: ExpressionNodeType.COLUMN,
 		dataValueType: DataValueType.LOOKUP
 	}, {
 		title: "Contact",
-		name: "Contact",
+		code: "Contact",
 		type: ExpressionNodeType.COLUMN,
 		dataValueType: DataValueType.LOOKUP
 	}, {
 		title: "DATEPART",
-		name: "DATEPART",
+		code: "DATEPART",
 		type: ExpressionNodeType.FUNCTION,
 		dataValueType: DataValueType.INTEGER,
 		arguments: [
@@ -48,7 +48,7 @@ export class ExpressionSourceServiceService {
 		]
 	}, {
 		title: "DATETIME",
-		name: "DATETIME",
+		code: "DATETIME",
 		type: ExpressionNodeType.FUNCTION,
 		dataValueType: DataValueType.INTEGER,
 		arguments: [
@@ -56,7 +56,7 @@ export class ExpressionSourceServiceService {
 		]
 	}, {
 		title: "GUID",
-		name: "GUID",
+		code: "GUID",
 		type: ExpressionNodeType.FUNCTION,
 		dataValueType: DataValueType.GUID,
 		arguments: [

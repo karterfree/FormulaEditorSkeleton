@@ -9,28 +9,26 @@ export class ExpressionNodeGenerator {
     public static generateEmptyExpressionNode(): ExpressionNode {
 		var element = new ExpressionNode();
 		element.type = ExpressionNodeType.UNSETTED;
-		element.content = '';
 		return element;
 	}
 
 	public static generateEmptyConstantExpressionNode(): ExpressionNode {
 		var element = new ExpressionNode();
 		element.type = ExpressionNodeType.CONSTANT;
-		element.content = '';
 		return element;
 	}
 
 	public static generateSingleOperationExpressionNode(operation: string): ExpressionNode {
 		var element = new ExpressionNode();
 		element.type = ExpressionNodeType.SINGLEOPERATION;
-		element.content = operation;
+		element.title = operation;
 		return element;
 	}
 
-	public static generateColumnExpressionNode(caption: string, metaPath: string, dataValueType: DataValueType): ExpressionNode {
+	/*public static generateColumnExpressionNode(caption: string, metaPath: string, dataValueType: DataValueType): ExpressionNode {
 		var element = new ExpressionNode();
 		element.type = ExpressionNodeType.COLUMN;
-		element.content = caption;
+		element.title = caption;
 		element.metaPath = metaPath;
 		element.dataValueType = dataValueType;
 		return element;
@@ -39,7 +37,7 @@ export class ExpressionNodeGenerator {
 	public static generateCustomFunctionExpressionNode(caption: string, dataValueType: DataValueType, functionArguments: ExpressionArgument[]): ExpressionNode {
 		var element = new ExpressionNode();
 		element.type = ExpressionNodeType.COLUMN;
-		element.content = caption;
+		element.title = caption;
 		element.arguments = functionArguments;
 		element.dataValueType = dataValueType;
 		return element;
@@ -49,7 +47,7 @@ export class ExpressionNodeGenerator {
 		var response: ExpressionNode[] = [];
 		var element = new ExpressionNode();
 		element.type = ExpressionNodeType.FUNCTION;
-		element.content = caption;
+		element.title = caption;
 		element.arguments = functionArguments;
 		element.dataValueType = dataValueType;
 		response.push(element);
@@ -59,7 +57,7 @@ export class ExpressionNodeGenerator {
 		}
 		response.push(ExpressionNodeGenerator.generateSingleOperationExpressionNode(KeyboardKey.BracketClose));
 		return response;
-	}
+	}*/
 
 	public static generateCustomFunctionArgumentsExpressionNodeGroup(functionArguments: ExpressionArgument[]): ExpressionNode[] {
 		var response: ExpressionNode[] = [];

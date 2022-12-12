@@ -187,11 +187,8 @@ export class ExpressionManager {
 
 	public actualizeExpressionNodesDataValueType(): void {
 		this._expressionNodes.forEach(x=>{
-			/*if (x.canChangeType()) {
-				x.type = ExpressionNodeType.CONSTANT;
-			}*/
 			if (x.canChangeDataValueType()) {
-				x.dataValueType = this._parseDataValueType(x.content);
+				x.dataValueType = this._parseDataValueType(x.title);
 			}
 		});
 	}

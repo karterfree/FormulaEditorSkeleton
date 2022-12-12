@@ -8,7 +8,7 @@ import { ExpressionArgument } from '../common/models/expression-argument/express
 
 class ExpressionCommandLineItem implements IExpressionSourceItem {
 	title: string;
-	name: string;
+	code: string;
 	type: ExpressionNodeType;
 	dataValueType: DataValueType;
 	arguments?: ExpressionArgument[];
@@ -17,7 +17,7 @@ class ExpressionCommandLineItem implements IExpressionSourceItem {
 
 	constructor(title: string, type: ExpressionNodeType, dataValueType: DataValueType, expressionArguments: ExpressionArgument[] | null = null) {
 		this.title = title;
-		this.name = title;
+		this.code = title;
 		this.type = type;
 		this.dataValueType = dataValueType;
 		if (expressionArguments) {
