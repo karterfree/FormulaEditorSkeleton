@@ -8,6 +8,7 @@ import { ExpressionUtilities } from '../../util/expression-utilities/expression-
 
 export interface IExpressionSourceItem {
 	title: string,
+	name: string,
 	type: ExpressionNodeType,
 	dataValueType: DataValueType,
 	arguments?: ExpressionArgument[]
@@ -17,7 +18,7 @@ export interface IExpressionSourceRequest {
 	titlePart: string,
 	comparisonType: ComparisonType,
 	availableTypes?: ExpressionNodeType[]
-	rootSchemaName?: string
+	referenceSchemaUId?: string
 }
 
 @Injectable({
@@ -27,14 +28,17 @@ export class ExpressionSourceServiceService {
 
 	mockList: IExpressionSourceItem[] = [{
 		title: "Account",
+		name: "Account",
 		type: ExpressionNodeType.COLUMN,
 		dataValueType: DataValueType.LOOKUP
 	}, {
 		title: "Contact",
+		name: "Contact",
 		type: ExpressionNodeType.COLUMN,
 		dataValueType: DataValueType.LOOKUP
 	}, {
 		title: "DATEPART",
+		name: "DATEPART",
 		type: ExpressionNodeType.FUNCTION,
 		dataValueType: DataValueType.INTEGER,
 		arguments: [
@@ -44,6 +48,7 @@ export class ExpressionSourceServiceService {
 		]
 	}, {
 		title: "DATETIME",
+		name: "DATETIME",
 		type: ExpressionNodeType.FUNCTION,
 		dataValueType: DataValueType.INTEGER,
 		arguments: [
@@ -51,6 +56,7 @@ export class ExpressionSourceServiceService {
 		]
 	}, {
 		title: "GUID",
+		name: "GUID",
 		type: ExpressionNodeType.FUNCTION,
 		dataValueType: DataValueType.GUID,
 		arguments: [

@@ -14,7 +14,7 @@ export class ExpressionUtilities {
 		return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
 	}
 
-	public static isReferenseable(type: ExpressionNodeType): boolean {
+	public static isComplexType(type: ExpressionNodeType): boolean {
 		switch (type) {
 			case ExpressionNodeType.UNSETTED:
 			case ExpressionNodeType.COLUMN:

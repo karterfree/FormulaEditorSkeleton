@@ -11,6 +11,7 @@ export class ExpressionNode {
 	private _metaPath: string;
 	private _arguments: ExpressionArgument[];
 	private _extKey: string;
+	private _inEditStatus: boolean;
 
 	private _isMarkedToDelete: boolean;
 	private _deleteFrom: number;
@@ -29,6 +30,16 @@ export class ExpressionNode {
 
 	public set metaPath(metaPath: string) {
 		this._metaPath = metaPath;
+	}
+
+	public get inEditStatus(): boolean {
+		return this._inEditStatus;
+	}
+
+	public set inEditStatus(value: boolean) {
+		if (value != this._inEditStatus) {
+			this._inEditStatus = value;
+		}
 	}
 
 	public get type(): ExpressionNodeType {
@@ -86,6 +97,7 @@ export class ExpressionNode {
 		this._isMarkedToDelete = false;
 		this._deleteFrom = 0;
 		this._extKey = "";
+		this._inEditStatus = false;
 	}
 
 	public generateDisplayElement(): ExpressionDisplayElement {
@@ -95,6 +107,9 @@ export class ExpressionNode {
 	}
 
 	public canChangeType(): boolean {
+		if (this.type === ExpressionNodeType.UNSETTED) {
+			return false;
+		}
 		if (this.type === ExpressionNodeType.COLUMN) {
 			return false;
 		}
@@ -108,6 +123,9 @@ export class ExpressionNode {
 	}
 
 	public canChangeDataValueType(): boolean {
+		if (this.type === ExpressionNodeType.UNSETTED) {
+			return false;
+		}
 		if (this.type === ExpressionNodeType.SINGLEOPERATION) {
 			return false;
 		}

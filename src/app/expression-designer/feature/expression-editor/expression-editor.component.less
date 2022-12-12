@@ -57,6 +57,14 @@
                     content: 'f';
                 }
             }
+
+            &.nt-undefined {
+                &::before {
+                    color: #666666;
+                    content: '?';
+                }
+            }
+            
         }
 
         .dvt-number {
@@ -71,9 +79,42 @@
 
     }
 
-    .command-line {
+    .complex-list {
         position: absolute;
-        z-index: 1;
+        background: #ffffff;
+        border: 1px solid #999999;
+    
+        &>div {
+            padding: 0.15em 0.25em 0.15em 1.5em;
+            cursor: pointer;
+            position: relative;
+    
+            &.focused {
+                background-color: #eeeeee;
+            }
+    
+            &::before {
+                position: absolute;
+                top: 4px;
+                left: 0;
+                font-family: 'Courier New', Courier, monospace;
+                background-color: #ffffff;
+                color: #999;
+                background-color: #eee;
+                border-radius: 2em;
+                width: 1.1em;
+                text-align: center;
+            }
+    
+            &.function::before {
+                content: 'f';
+            }
+    
+            &.column::before {
+                content: 'c';
+            }
+    
+        }
     }
     
 }

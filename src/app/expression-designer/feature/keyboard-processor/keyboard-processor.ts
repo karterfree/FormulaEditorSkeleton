@@ -1,3 +1,5 @@
+import { IExpressionSourceItem, IExpressionSourceRequest } from "../../data-access/expression-source-api/expression-source-service.service";
+import { ExpressionNodeType } from "../../util/enums/expression-node-type.enum";
 import { KeyboardProcessEvent } from "../common/enums/keyboard-process-event.enum";
 import { ExpressionDisplayElement } from "../common/models/expression-display-element/expression-display-element";
 import { ExpressionNode } from "../common/models/expression-node/expression-node";
@@ -10,7 +12,8 @@ export interface IBaseProcessorRequest {
 }
 
 export interface IKeyboardProcessorResponse extends IBaseProcessorRequest {
-	displayList: ExpressionDisplayElement[]
+	displayList: ExpressionDisplayElement[],
+	complexListRequest?: IExpressionSourceRequest
 }
 
 export interface IExtendColumnRequest extends IBaseProcessorRequest {
@@ -31,8 +34,25 @@ export interface ICommandOperationResponse {
 	caretIndexShift?: number;
 }
 
+enum KeyboardEventType {
+	KeyPress,
+	SelectComplex,
+	Paste
+}
+
+interface IKeyboardEventItem {
+	type: KeyboardEventType,
+	keyEvent?: KeyboardEvent,
+	complexItem?: IExpressionSourceItem
+}
+
+export interface ICommandOperationResponse {
+	items: ExpressionNode[],
+	caretIndexShift?: number;
+}
+
 export class KeyboardProcessor {
-	private _events: KeyboardEvent[];
+	private _events: IKeyboardEventItem[];
 	private _inProcess: boolean;
 	private _subscribes: {[key: string]: Function};
 	
@@ -51,8 +71,8 @@ export class KeyboardProcessor {
 
 	private _subscribeOnKeyboardKeyProcessorEvents(): void {
 		this._keyboardKeyProcessor.subscribe(KeyboardProcessEvent.FINISH, (...args: any) => this._invokeFinishHendler());
-		this._keyboardKeyProcessor.subscribe(KeyboardProcessEvent.COMMAND, (...args: any) => this._callHandler(KeyboardProcessEvent.COMMAND, ...args));
-		this._keyboardKeyProcessor.subscribe(KeyboardProcessEvent.EXTENDENT, (...args: any) => this._callHandler(KeyboardProcessEvent.EXTENDENT, ...args));
+		//this._keyboardKeyProcessor.subscribe(KeyboardProcessEvent.COMMAND, (...args: any) => this._callHandler(KeyboardProcessEvent.COMMAND, ...args));
+		//this._keyboardKeyProcessor.subscribe(KeyboardProcessEvent.EXTENDENT, (...args: any) => this._callHandler(KeyboardProcessEvent.EXTENDENT, ...args));
 	}
 
 	private _dispatchNextEvent(iterator: number = 0) {
@@ -66,12 +86,11 @@ export class KeyboardProcessor {
 		this._inProcess = true;
 		var event = this._events.shift();
 		if (event != null && event != undefined) {
-			if (iterator === 0) {
-				this._keyboardKeyProcessor.caretIndex = this._getCaretIndex(event.currentTarget);
+			if (event.type === KeyboardEventType.KeyPress && event.keyEvent != null) {
+				this._dispatchKeyPressEvent(event.keyEvent, iterator);
 			}
-			if (this._dispatchEvent(event)) {
-				event.preventDefault();
-				event.stopPropagation();
+			if (event.type === KeyboardEventType.SelectComplex && event.complexItem != null) {
+				this._dispatchComplexItemEvent(event.complexItem);
 			}
 		}
 		this._onEventDispatched(iterator)
@@ -109,18 +128,30 @@ export class KeyboardProcessor {
 		return position;
 	}
 
-	private _dispatchEvent(event: KeyboardEvent): boolean {
-		return this._keyboardKeyProcessor.dispatchEvent(event);
+	private _dispatchKeyPressEvent(event: KeyboardEvent, iterator: number): void {
+		if (iterator === 0) {
+			this._keyboardKeyProcessor.caretIndex = this._getCaretIndex(event.currentTarget);
+		}
+		if (this._keyboardKeyProcessor.dispatchKeyPressEvent(event)) {
+			event.preventDefault();
+			event.stopPropagation();
+		}
+	}
+
+	private _dispatchComplexItemEvent(complexItem: IExpressionSourceItem): void {
+		this._keyboardKeyProcessor.dispatchSelectComplexEvent(complexItem)
 	}
 
 	private _invokeFinishHendler() {
 		this._expressionManager.actualizeExpressionNodesDataValueType();
 		var caretIndex: number = this._keyboardKeyProcessor.caretIndex;
 		var caretDomPosition = this._expressionManager.getCaretDomPosition(caretIndex);
+		var complexListRequest = this._keyboardKeyProcessor.getComplexListRequest();
 		this._callHandler(KeyboardProcessEvent.FINISH, {
 			"elementIndex": caretDomPosition.elementIndex,
 			"elementCaretIndex": caretDomPosition.elementCaretIndex,
-			"displayList": this._expressionManager.generateExpressionDisplayElementList()
+			"displayList": this._expressionManager.generateExpressionDisplayElementList(),
+			"complexListRequest": complexListRequest
 		});
 	}
 
@@ -139,8 +170,19 @@ export class KeyboardProcessor {
 		}
 	}
 
-	public register(event: KeyboardEvent): void {
-		this._events.push(event);
+	public registerComplexItem(complexItem: IExpressionSourceItem): void {
+		this._events.push({
+			type: KeyboardEventType.SelectComplex,
+			complexItem: complexItem
+		});
+		this._dispatchNextEvent();
+	}
+
+	public registerKeyEvent(keyEvent: KeyboardEvent): void {
+		this._events.push({
+			type: KeyboardEventType.KeyPress,
+			keyEvent: keyEvent
+		});
 		this._dispatchNextEvent();
 	}
 

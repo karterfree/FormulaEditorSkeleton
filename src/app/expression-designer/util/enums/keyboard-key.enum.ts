@@ -54,5 +54,6 @@ export enum KeyboardKey {
 	AtSign = "@",
 	Comma = ",",
 	Dot = ".",
-	Space = " "
+	Space = " ",
+	Quotation = "\""
 }

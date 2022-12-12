@@ -1,5 +1,5 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import { IExpressionSourceItem } from '../../data-access/expression-source-api/expression-source-service.service';
+import { ExpressionSourceServiceService, IExpressionSourceItem, IExpressionSourceRequest } from '../../data-access/expression-source-api/expression-source-service.service';
 import { DataValueType } from '../../util/enums/data-value-type.enum';
 import { ExpressionNodeType } from '../../util/enums/expression-node-type.enum';
 import { KeyboardProcessEvent } from '../common/enums/keyboard-process-event.enum';
@@ -9,6 +9,36 @@ import { ExpressionDisplayElement } from '../common/models/expression-display-el
 import { ExpressionNodeGenerator } from '../expression-node-generator/expression-node-generator';
 import { ICommandOperationRequest, IKeyboardProcessorResponse, KeyboardProcessor } from '../keyboard-processor/keyboard-processor';
 
+class ExpressionComplexListItem implements IExpressionSourceItem {
+	title: string;
+	name: string;
+	type: ExpressionNodeType;
+	dataValueType: DataValueType;
+	arguments?: ExpressionArgument[];
+
+	focused: boolean = false;
+
+	constructor(item: IExpressionSourceItem) {
+		this.title = item.title;
+		this.name = item.name;
+		this.type = item.type;
+		this.dataValueType = item.dataValueType;
+		if (item.arguments) {
+			this.arguments = item.arguments;
+		}
+	}
+
+	getExpressionSourceItem(): IExpressionSourceItem {
+		return {
+			title: this.title,
+			name: this.name,
+			type: this.type,
+			dataValueType: this.dataValueType,
+			arguments: this.arguments
+		}
+	}
+}
+
 @Component({
   selector: 'app-expression-editor',
   templateUrl: './expression-editor.component.html',
@@ -16,17 +46,21 @@ import { ICommandOperationRequest, IKeyboardProcessorResponse, KeyboardProcessor
 })
 export class ExpressionEditorComponent implements OnInit {
 
-  @ViewChild('visualizator') visualizator!: ElementRef;
+	@ViewChild('visualizator') visualizator!: ElementRef;
 	@ViewChild('elementsLog') elementsLog!: ElementRef;
 	
 	caretIndex: number;
 	cursorIndex: number;
 	cursorX: number;
 	cursorY: number;
+	complexListTop: number;
+	complexListLeft: number;
+
+	complexList: ExpressionComplexListItem[];
 
 	public commandLineCommand: ICommandLineCommand | null;
 
-	public isCommandLineVisible: boolean;
+	public isComplexListVisible: boolean;
 
 	private previousFormulaContent: string = '';
 	
@@ -36,26 +70,29 @@ export class ExpressionEditorComponent implements OnInit {
 
 	private _commandLineResponseHandler: Function | null = null;
 
-	constructor() { 
+	constructor(private _dataService: ExpressionSourceServiceService) { 
 		this.cursorIndex = 0;
 		this.caretIndex = 0;
 		this.cursorX = 0;
 		this.cursorY = 0;
+		this.complexListTop = 0;
+		this.complexListLeft = 0;
 		this._keyboardProcessor = this._initKeyboardProcessor();
 		this.formulaDisplayElements = [];
 		this.subscribeOnKeyboardProcessorEvents();
-		this.isCommandLineVisible = false;
+		this.isComplexListVisible = false;
 		this.commandLineCommand = null;
+		this.complexList = [];
 	}
 
 	onFocus(event: any): void {
-		this.hideCommandLine();
+		
 	}
 
-	showCommandLine(elementIndex: number, elementCaretIndex: number): Promise<IExpressionSourceItem | null> {
+	/*showCommandLine(elementIndex: number, elementCaretIndex: number): Promise<IExpressionSourceItem | null> {
 		return new Promise((resolve, reject) => {
 			setTimeout(()=>{
-				var coordinates = this.caretCaretCoordinates(elementIndex, elementCaretIndex);
+				var coordinates = this.getCaretCoordinates(elementIndex, elementCaretIndex);
 				if (coordinates) {
 					this.cursorX = coordinates.left;
 					this.cursorY = coordinates.top;
@@ -69,24 +106,34 @@ export class ExpressionEditorComponent implements OnInit {
 				}
 			}, 4);
 		});
-	}
+	}*/
 
-	onCommandLineResponse(response: IExpressionSourceItem | null): void {
-		this.hideCommandLine();
-		if (this._commandLineResponseHandler) {
-			this._commandLineResponseHandler.call(this, response);
+	getFontSize(): number {
+		if (!this.visualizator || !this.visualizator.nativeElement) {
+			return 0;
 		}
+		return parseFloat(getComputedStyle(this.visualizator.nativeElement).fontSize);	
 	}
 
-	getCommandLineStyle(): any {
-		return {
-			"left": this.cursorX,
-			"top": this.cursorY
-		};
+	getComplexLineStyle(): any {
+		return `left: ${this.complexListLeft}px; top: ${this.complexListTop}px;`
 	}
 
-	hideCommandLine(): void {
-		this.isCommandLineVisible = false;
+	showComplexList(request: IExpressionSourceRequest, elementIndex: number): void {
+		this.updateComplexListPosition(elementIndex);
+		if (!this.isComplexListVisible) {
+			this.isComplexListVisible = true;
+		}
+
+		this._dataService.getList(request).subscribe((response: IExpressionSourceItem[]) => {
+			this.complexList =  response.map(item => new ExpressionComplexListItem(item));
+		})
+	}
+
+	hideComplexList(): void {
+		if (this.isComplexListVisible) {
+			this.isComplexListVisible = false;
+		}
 	}
 
 	setVisualizatorFocus(): any {
@@ -103,21 +150,26 @@ export class ExpressionEditorComponent implements OnInit {
 
 	subscribeOnKeyboardProcessorEvents(): void {
 		this._keyboardProcessor.subscribe(KeyboardProcessEvent.FINISH, (item: IKeyboardProcessorResponse) => this.onFinishHandler(item));
-		this._keyboardProcessor.subscribe(KeyboardProcessEvent.COMMAND, (config: any, callback: Function) => this.onCommandHandler(config, callback));
-		this._keyboardProcessor.subscribe(KeyboardProcessEvent.EXTENDENT, (config: any, callback: Function) => this.onExtendendHandler(config, callback));
+		//this._keyboardProcessor.subscribe(KeyboardProcessEvent.COMMAND, (config: any, callback: Function) => this.onCommandHandler(config, callback));
+		//this._keyboardProcessor.subscribe(KeyboardProcessEvent.EXTENDENT, (config: any, callback: Function) => this.onExtendendHandler(config, callback));
 	}
 
-	onFinishHandler(item: IKeyboardProcessorResponse): void {
-		this.formulaDisplayElements = item.displayList;
+	onFinishHandler(response: IKeyboardProcessorResponse): void {
+		this.formulaDisplayElements = response.displayList;
 		setTimeout(()=>{
-			this.updateCaretPosition(item.elementIndex, item.elementCaretIndex);
+			this.updateCaretPosition(response.elementIndex, response.elementCaretIndex);
+			if (response.complexListRequest != null) {
+				this.showComplexList(response.complexListRequest, response.elementIndex)
+			} else {
+				this.hideComplexList();
+			}
 			this.elementsLog.nativeElement.innerHTML = this._keyboardProcessor.getSerializedElements();
 		}, 4);
 	}
 
 	onCommandHandler(config: ICommandOperationRequest, callback: Function): void {
 		setTimeout(()=>{
-			this.showCommandLine(config.elementIndex, config.elementCaretIndex).then((item: IExpressionSourceItem | null) => {
+			/*this.showCommandLine(config.elementIndex, config.elementCaretIndex).then((item: IExpressionSourceItem | null) => {
 
 				var items: any[] = [];
 				if (item) {
@@ -130,7 +182,7 @@ export class ExpressionEditorComponent implements OnInit {
 				callback({
 					"items": items
 				});
-			});
+			});*/
 			
 			/*callback({
 				"items": [
@@ -168,7 +220,7 @@ export class ExpressionEditorComponent implements OnInit {
 	}
 
 	onKeyDown(event: KeyboardEvent): void {
-		this._keyboardProcessor.register(event);
+		this._keyboardProcessor.registerKeyEvent(event);
 	}
 
 	isEmpty(value: any): boolean {
@@ -185,16 +237,16 @@ export class ExpressionEditorComponent implements OnInit {
 	}
 
 	onKeyUp(event: KeyboardEvent): void {
-		if (this.isCommandLineVisible) {
+		/*if (this.isCommandLineVisible) {
 			return;
-		}
+		}*/
 		this.updateCursorPosition(event.currentTarget);
 	}
 
 	updateCaretPosition(elementIndex: number, elementCaretIndex: number): void {
 		var el = this.visualizator.nativeElement;
 		var sel = window.getSelection();
-		var range = document.createRange()
+		var range = document.createRange();
 		var startWrap = el.childNodes[elementIndex] || el;
 		var startEl = startWrap.childNodes[0] || startWrap;
 		range.setStart(startEl, elementCaretIndex)
@@ -203,9 +255,19 @@ export class ExpressionEditorComponent implements OnInit {
 			sel.removeAllRanges();
 			sel.addRange(range)
 		}
+		var coordinates =  this.getCaretCoordinates(elementIndex, elementCaretIndex);
+		this.cursorX = coordinates.left;
+		this.cursorY = coordinates.top;
 	}
 
-	caretCaretCoordinates(elementIndex: number, elementCaretIndex: number): any {
+	updateComplexListPosition(elementIndex: number): void {
+		var fontSize = this.getFontSize();
+		var coordinates =  this.getCaretCoordinates(elementIndex, 0);
+		this.complexListLeft = coordinates.left;
+		this.complexListTop = coordinates.top + fontSize + 3;
+	}
+
+	getCaretCoordinates(elementIndex: number, elementCaretIndex: number): any {
 		var el = this.visualizator.nativeElement;
 		var targetElement: any = Array.from(el.childNodes).filter((x:any)=>x.nodeName === "PRE")[elementIndex];
 		var temporaryElement:any = null;
@@ -237,10 +299,6 @@ export class ExpressionEditorComponent implements OnInit {
 	}
 
 	updateCursorPosition(target: any): void {
-		var coords = this.getCaretCoordinates();
-		this.cursorX = coords.x;
-		this.cursorY = coords.y;
-		this.cursorIndex = this.caretIndex;
 		console.log("x: " + this.cursorX + "; y: " + this.cursorY + "; index: " + this.cursorIndex);
 	}
 
@@ -281,7 +339,7 @@ export class ExpressionEditorComponent implements OnInit {
 		return position;
 	}
 
-	getCaretCoordinates(): any {
+	/*getCaretCoordinates(): any {
 		let x = 0,
 			y = 0;
 		const isSupported = typeof window.getSelection !== "undefined";
@@ -298,6 +356,31 @@ export class ExpressionEditorComponent implements OnInit {
 			}
 		}
 		return { x, y };
+	}*/
+
+	getComplexListItemClass(item: ExpressionComplexListItem): string {
+		var classes: string[] = [];
+		if (item.type === ExpressionNodeType.COLUMN) {
+			classes.push("column");
+		} else if (item.type === ExpressionNodeType.FUNCTION) {
+			classes.push("function");
+		}
+		if (item.focused) {
+			classes.push("focused");
+		}
+		return classes.join(" ");
 	}
 
+	onMouseOverComplexItem(item: ExpressionComplexListItem): void {
+		if (item.focused) {
+			return;
+		}
+		this.complexList.filter(x=>x.focused).forEach(x=>x.focused = false);
+		item.focused = true;
+	}
+
+	onComplexItemSelect(item: ExpressionComplexListItem): void {
+		this._keyboardProcessor.registerComplexItem(item.getExpressionSourceItem());
+		this.hideComplexList();
+	}
 }

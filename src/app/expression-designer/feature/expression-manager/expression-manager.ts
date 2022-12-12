@@ -13,31 +13,54 @@ export interface ICaretDomPosition {
 export class ExpressionManager {
 	private _expressionNodes: ExpressionNode[];
 
+	private _activeNode: ExpressionNode | null;
+
+	public get activeNode(): ExpressionNode | null {
+		return this._activeNode;
+	}
+
+	public set activeNode(value: ExpressionNode | null) {
+		this._activeNode = value;
+	}
+
 	constructor() {
 		this._expressionNodes = [];
+		this._activeNode = null;
 	}
+
 
 	public getCurrentElement(caretIndex: number): ExpressionNode {
 		var startFrom: number = 0;
 		var isFounded: boolean = false;
-		var selectedElement: ExpressionNode = this._expressionNodes[this._expressionNodes.length-1] || null;
+		var selectedNode: ExpressionNode = this._expressionNodes[this._expressionNodes.length-1] || null;
 		this._expressionNodes.forEach((element)=> {
 			if (!isFounded) {
 				if (caretIndex >= startFrom && caretIndex < (startFrom + element.contentLength)) {
-					selectedElement = element;
+					selectedNode = element;
 					isFounded = true;
 				} else {
 					startFrom += element.contentLength;
 				}
 			}
-		})
-		return selectedElement;
+		});
+		if (this.activeNode != null && selectedNode != null) {
+			var innerCaretIndex = this.getExpressionNodeCaretIndex(selectedNode, caretIndex);
+			var prevNode = this.getPrevElement(selectedNode);
+			var nextNode = this.getNextElement(selectedNode);
+			if (innerCaretIndex === 0 && prevNode == this.activeNode) {
+				selectedNode = this.activeNode;
+			} else if (innerCaretIndex === selectedNode.contentLength && nextNode == this.activeNode) {
+				selectedNode = this.activeNode;
+			}
+		}
+
+		return selectedNode;
 	}
 
 	public forceGetCurrentElement(caretIndex: number): ExpressionNode {
 		var expressionNode = this.getCurrentElement(caretIndex);
 		if (!expressionNode) {
-			expressionNode = ExpressionNodeGenerator.generateEmptyExpressionNode();
+			expressionNode = ExpressionNodeGenerator.generateEmptyConstantExpressionNode()
 			this.add(expressionNode);
 		}
 		return expressionNode;
@@ -164,9 +187,9 @@ export class ExpressionManager {
 
 	public actualizeExpressionNodesDataValueType(): void {
 		this._expressionNodes.forEach(x=>{
-			if (x.canChangeType()) {
+			/*if (x.canChangeType()) {
 				x.type = ExpressionNodeType.CONSTANT;
-			}
+			}*/
 			if (x.canChangeDataValueType()) {
 				x.dataValueType = this._parseDataValueType(x.content);
 			}
@@ -175,22 +198,29 @@ export class ExpressionManager {
 
 	public removeEmptyElements() {
 		for (let i = this._expressionNodes.length -1; i >= 0; i--) {
-			var element = this._expressionNodes[i];
-			if (element.isEmpty()) {
+			var node = this._expressionNodes[i];
+			if (node.isEmpty() && !this.canBeEmpty(node)) {
 				this._expressionNodes.splice(i, 1);
 			}
 		}
+	}
+
+	public canBeEmpty(node: ExpressionNode): boolean {
+		return node === this.activeNode && ExpressionUtilities.isComplexType(node.type);
 	}
 
 	public removeElement(expressionNode: ExpressionNode | null) {
 		if (expressionNode) {
 			var positon = this.getElementPosition(expressionNode);
 			this._expressionNodes.splice(positon, 1);
+			if (this.activeNode === expressionNode) {
+				this.activeNode = null;
+			}
 		}
 	}
 
 	public getSerializedElements(): string {
-		return JSON.stringify(this._expressionNodes);
+		return JSON.stringify(this._expressionNodes) + " |||| " + JSON.stringify(this.activeNode);
 	}
 
 	public tryJoinElements(leftElement: ExpressionNode | null, rightElement: ExpressionNode | null): boolean {

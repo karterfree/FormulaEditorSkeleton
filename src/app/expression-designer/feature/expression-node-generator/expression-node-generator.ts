@@ -13,6 +13,13 @@ export class ExpressionNodeGenerator {
 		return element;
 	}
 
+	public static generateEmptyConstantExpressionNode(): ExpressionNode {
+		var element = new ExpressionNode();
+		element.type = ExpressionNodeType.CONSTANT;
+		element.content = '';
+		return element;
+	}
+
 	public static generateSingleOperationExpressionNode(operation: string): ExpressionNode {
 		var element = new ExpressionNode();
 		element.type = ExpressionNodeType.SINGLEOPERATION;
@@ -46,6 +53,16 @@ export class ExpressionNodeGenerator {
 		element.arguments = functionArguments;
 		element.dataValueType = dataValueType;
 		response.push(element);
+		response.push(ExpressionNodeGenerator.generateSingleOperationExpressionNode(KeyboardKey.BracketOpen));
+		for (var i = 0; i < functionArguments.length - 1; i++) {
+			response.push(ExpressionNodeGenerator.generateSingleOperationExpressionNode(KeyboardKey.Comma));
+		}
+		response.push(ExpressionNodeGenerator.generateSingleOperationExpressionNode(KeyboardKey.BracketClose));
+		return response;
+	}
+
+	public static generateCustomFunctionArgumentsExpressionNodeGroup(functionArguments: ExpressionArgument[]): ExpressionNode[] {
+		var response: ExpressionNode[] = [];
 		response.push(ExpressionNodeGenerator.generateSingleOperationExpressionNode(KeyboardKey.BracketOpen));
 		for (var i = 0; i < functionArguments.length - 1; i++) {
 			response.push(ExpressionNodeGenerator.generateSingleOperationExpressionNode(KeyboardKey.Comma));

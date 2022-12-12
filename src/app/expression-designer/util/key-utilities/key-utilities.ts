@@ -15,8 +15,7 @@ export class KeyUtilities {
 		new KeyItem(KeyboardKey.Meta),
 		new KeyItem(KeyboardKey.ContextMenu),
 		new KeyItem(KeyboardKey.NumLock),
-		new KeyItem(KeyboardKey.PageUp),
-		new KeyItem(KeyboardKey.PageDown),
+		
 		new KeyItem(KeyboardKey.Insert),
 		new KeyItem(KeyboardKey.ScrollLock),
 		new KeyItem(KeyboardKey.Pause),
@@ -29,11 +28,16 @@ export class KeyUtilities {
 		new KeyItem(KeyboardKey.v, KeyUsageMode.ENABLED),
 	];
 
-	private _moveKeys: KeyItem[] = [
-		new KeyItem(KeyboardKey.ArrowLeft),
-		new KeyItem(KeyboardKey.ArrowRight),
+	private _verticalMoveKeys: KeyItem[] = [
 		new KeyItem(KeyboardKey.ArrowUp),
 		new KeyItem(KeyboardKey.ArrowDown),
+		new KeyItem(KeyboardKey.PageUp),
+		new KeyItem(KeyboardKey.PageDown)
+	];
+
+	private _horizontalMoveKeys: KeyItem[] = [
+		new KeyItem(KeyboardKey.ArrowLeft),
+		new KeyItem(KeyboardKey.ArrowRight),
 		new KeyItem(KeyboardKey.End),
 		new KeyItem(KeyboardKey.Home),
 	];
@@ -93,8 +97,16 @@ export class KeyUtilities {
 		return this.has(keyItem, this._deniedKeys);
 	}
 
+	public isHorizontalMoveKey(keyItem: KeyItem): boolean {
+		return this.has(keyItem, this._horizontalMoveKeys);
+	}
+
+	public isVerticalMoveKey(keyItem: KeyItem): boolean {
+		return this.has(keyItem, this._verticalMoveKeys);
+	}
+
 	public isMoveKey(keyItem: KeyItem): boolean {
-		return this.has(keyItem, this._moveKeys);
+		return this.isHorizontalMoveKey(keyItem) || this.isVerticalMoveKey(keyItem);
 	}
 
 	public isFKey(keyItem: KeyItem): boolean {
@@ -106,7 +118,7 @@ export class KeyUtilities {
 	}
 
 	public isChangelessKey(keyItem: KeyItem): boolean {
-		return this.isMoveKey(keyItem) || this.isFKey(keyItem);
+		return this.isFKey(keyItem);
 	}
 
 	public isMathKey(keyItem: KeyItem): boolean {
