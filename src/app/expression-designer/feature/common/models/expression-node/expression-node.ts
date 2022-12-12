@@ -107,7 +107,7 @@ export class ExpressionNode {
 		this._metaPath = "";
 		this._arguments = [];
 		this._isMarkedToDelete = false;
-		this._extKey = "";
+		this._extKey = ExpressionUtilities.generateGUID();
 		this._inEditStatus = false;
 		this._backup = null;
 		this._code = "";

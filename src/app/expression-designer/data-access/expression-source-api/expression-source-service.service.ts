@@ -80,7 +80,8 @@ export class ExpressionSourceServiceService {
 		if (ExpressionUtilities.isEmpty(request.availableTypes)) {
 			return true;
 		}
-		return (request.availableTypes?.indexOf(item.type) || -1) >= 0
+		var availableTypes = request.availableTypes || [];
+		return availableTypes.indexOf(item.type) >= 0;
 	}
 
 	public getList(request: IExpressionSourceRequest): Observable<IExpressionSourceItem[]> {
