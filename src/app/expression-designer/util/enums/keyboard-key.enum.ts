@@ -55,5 +55,6 @@ export enum KeyboardKey {
 	Comma = ",",
 	Dot = ".",
 	Space = " ",
-	Quotation = "\""
+	Quotation = "\"",
+	Escape = "Escape"
 }

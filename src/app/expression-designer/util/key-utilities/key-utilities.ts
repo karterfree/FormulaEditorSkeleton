@@ -15,7 +15,7 @@ export class KeyUtilities {
 		new KeyItem(KeyboardKey.Meta),
 		new KeyItem(KeyboardKey.ContextMenu),
 		new KeyItem(KeyboardKey.NumLock),
-		
+
 		new KeyItem(KeyboardKey.Insert),
 		new KeyItem(KeyboardKey.ScrollLock),
 		new KeyItem(KeyboardKey.Pause),
@@ -89,6 +89,10 @@ export class KeyUtilities {
 		new KeyItem(KeyboardKey.AtSign, KeyUsageMode.IGNORED, KeyUsageMode.IGNORED, KeyUsageMode.ENABLED),
 	];
 
+	private _cancelKeys: KeyItem[] = [
+		new KeyItem(KeyboardKey.Escape, KeyUsageMode.IGNORED, KeyUsageMode.IGNORED, KeyUsageMode.IGNORED),
+	];
+
 	private has(keyItem: KeyItem, list: KeyItem[]): boolean {
 		return list.filter(x=>keyItem.equal(x)).length > 0;
 	}
@@ -136,15 +140,19 @@ export class KeyUtilities {
     public isDelimeterKey(keyItem: KeyItem): boolean {
         return this.has(keyItem, this._delimeterKeys);
     }
- 
+
 	public isSingleOperationKey(keyItem: KeyItem): boolean {
 		return this.isMathKey(keyItem) ||
 			this.isBracketKey(keyItem) ||
 			this.isConditionKey(keyItem) ||
-            this.isDelimeterKey(keyItem);
+			this.isDelimeterKey(keyItem);
 	}
 
 	public isCommandKey(keyItem: KeyItem): boolean {
 		return this.has(keyItem, this._commandKeys);
+	}
+
+	isCancelKey(keyItem: KeyItem): boolean {
+		return this.has(keyItem, this._cancelKeys);
 	}
 }

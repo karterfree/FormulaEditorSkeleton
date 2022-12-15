@@ -18,8 +18,8 @@ export class KeyboardKeyProcessor {
 	private _caretIndex: number;
 	private _subscribes: {[key: string]: Function};
 
-	
-	
+
+
 	public get caretIndex(): number {
 		return this._caretIndex;
 	}
@@ -45,7 +45,11 @@ export class KeyboardKeyProcessor {
 		} else if (keyItem.key === KeyboardKey.Home) {
 			this.caretIndex = 0;
 		}
-		this._expressionManager.activeNode = this._expressionManager.getCurrentElement(this.caretIndex);
+		var newActiveNode = this._expressionManager.getCurrentElement(this.caretIndex);
+		if (this._expressionManager.activeNode !== newActiveNode && this._isActiveNodeInEditStatus()) {
+			this._unsetActiveNode();
+			this._expressionManager.activeNode = newActiveNode;
+		}
 	}
 
 	public processRemoveOpertion(keyItem: KeyItem): void {
@@ -98,24 +102,6 @@ export class KeyboardKeyProcessor {
 		}
 		this.caretIndex = this._expressionManager.getActualExpressionNodeCaretIndex(items[0]);
 		items.forEach(x=>this._expressionManager.removeElement(x));
-	}
-
-	private _canRemoveOperationWithoutMark(expressionNode: ExpressionNode): boolean {
-		var nextElement = this._expressionManager.getNextElement(expressionNode);
-		if (!expressionNode.canRemoveOperationWithoutMark() || (!ExpressionUtilities.isEmpty(expressionNode.extKey) && nextElement != null && expressionNode.extKey === nextElement.extKey)) {
-			return false;
-		}
-		return true;
-	}
-
-	private _markToDeleteFrom(expressionNode: ExpressionNode) {
-		var prevExpressionNode = this._expressionManager.getPrevElement(expressionNode);
-		if (expressionNode.isColumn() && prevExpressionNode != null && expressionNode.isJoinedWith(prevExpressionNode) && prevExpressionNode.title === KeyboardKey.Dot) {
-			expressionNode = prevExpressionNode;
-		}
-		expressionNode.markToDelete();
-		var nextExtChainElements = this._expressionManager.getExtChainElementsFrom(expressionNode);
-		nextExtChainElements.forEach(x=>x.markToDelete());
 	}
 
 	private _processRemoveByDeleteOpertion(element: ExpressionNode): ExpressionNode | null {
@@ -244,28 +230,6 @@ export class KeyboardKeyProcessor {
 		this._setCommandNodeToEditable(commandNode);
 		this._expressionManager.activeNode = commandNode;
 		this.caretIndex++;
-
-
-		/*var caretDomPosition = this._expressionManager.getCaretDomPosition(this.caretIndex);
-		var request: IExtendColumnRequest = {
-			"elementIndex": caretDomPosition.elementIndex,
-			"elementCaretIndex": caretDomPosition.elementCaretIndex,
-			"extRootMetaPath": expressionNode.metaPath,
-			"extKey": expressionNode.froceGetExtKey()
-		};
-		this._callHandler(KeyboardProcessEvent.EXTENDENT, request, (response: IExtendColumnResponse) => {
-			var contentShift: number = 0;
-			response.items.reverse().forEach((item: ExpressionNode) => {
-				item.extKey = expressionNode.extKey;
-				this._expressionManager.insertAfter(item, expressionNode);
-				var dotElement = ExpressionNodeGenerator.generateSingleOperationExpressionNode(KeyboardKey.Dot);
-				dotElement.extKey = expressionNode.extKey;
-				this._expressionManager.insertAfter(dotElement, expressionNode);
-				contentShift += item.contentLength + 1;
-			});
-			this.caretIndex += contentShift;
-			this._callHandler(KeyboardProcessEvent.FINISH);
-		});*/
 	}
 
 	public dispatchSelectComplexEvent(complexItem: IExpressionSourceItem): boolean {
@@ -294,6 +258,12 @@ export class KeyboardKeyProcessor {
 		if (this._keyUtilities.isDeniedKey(keyItem) || this._keyUtilities.isVerticalMoveKey(keyItem)) {
 			return true;
 		}
+		if (this._keyUtilities.isCancelKey(keyItem)) {
+			if (this._isActiveNodeInEditStatus()) {
+				this._unsetActiveNode();
+			}
+			return true;
+		}
 		if (this._keyUtilities.isRemoveKey(keyItem)) {
 			this.processRemoveOpertion(keyItem);
 			return true;
@@ -310,7 +280,7 @@ export class KeyboardKeyProcessor {
 				this.processCommonOpertion(keyItem);
 			}
 		}
-		
+
 		return true;
 		if (!this._keyUtilities.isRemoveKey(keyItem) && this._expressionManager.hasMarkToDelete()) {
 			this._expressionManager.removeAllMarksToDelete();
@@ -346,6 +316,25 @@ export class KeyboardKeyProcessor {
 		if (handler != null) {
 			handler(...args);
 		}
+	}
+
+	private _isActiveNodeInEditStatus(): boolean {
+		var activeNode = this._expressionManager.activeNode;
+		return activeNode !== null && activeNode.inEditStatus;
+	}
+
+	private _unsetActiveNode(): boolean {
+		var activeNode = this._expressionManager.activeNode;
+		if (activeNode !== null) {
+			activeNode.rollbackChanges();
+			var zeroPosition = this._expressionManager.getActualExpressionNodeCaretIndex(activeNode, 0);
+			if (zeroPosition < this._caretIndex) {
+				this._caretIndex = zeroPosition + activeNode.contentLength;
+			}
+			this._expressionManager.activeNode = null;
+			return true;
+		}
+		return false;
 	}
 
 	private _getEditableElement(): ExpressionNode {

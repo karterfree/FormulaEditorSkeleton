@@ -128,7 +128,7 @@ export class ExpressionNode {
 		this.inEditStatus = false;
 	}
 
-	public restoreNodeData() {
+	public rollbackChanges() {
 		if (this._backup !== null) {
 			this.title = this._backup.title;
 			this.code = this._backup.code;
@@ -315,7 +315,7 @@ export class ExpressionNode {
 
 	public markToDelete(): void {
 		this._isMarkedToDelete = true;
-		
+
 	}
 
 	public unMarkToDelete(): void {
