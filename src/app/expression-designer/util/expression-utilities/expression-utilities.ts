@@ -52,23 +52,4 @@ export class ExpressionUtilities {
 		return true;
 	}
 
-	public static areArrayDeeplyEqual(first: any[] | null | undefined, second: any[] | null | undefined, valuableKeys: string[] = []): boolean {
-		if (first === second) {
-			return true;
-		}
-		if (first == null || first === undefined || second == null || second === undefined) {
-			return false;
-		}
-		if (first.length != second.length) {
-			return false;
-		}
-		for (let i = 0; i < first.length; i++) {
-			let fCount = first.filter(x=>x === first[i]).length;
-			let sCount = second.filter(x=>x === first[i]).length;
-			if (fCount === 0 || sCount === 0 || fCount !== sCount) {
-				return false;
-			}
-		}
-		return true;
-	}
 }

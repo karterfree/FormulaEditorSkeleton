@@ -7,6 +7,7 @@ import { ExpressionManager } from "../expression-manager/expression-manager";
 import { KeyboardKeyProcessor } from "../keyboard-key-processor/keyboard-key-processor";
 
 export interface IBaseProcessorRequest {
+	caretIndex: number;
 	elementIndex: number;
 	elementCaretIndex: number;
 }
@@ -26,7 +27,7 @@ export interface IExtendColumnResponse {
 }
 
 export interface ICommandOperationRequest extends IBaseProcessorRequest {
-	
+
 }
 
 export interface ICommandOperationResponse {
@@ -58,10 +59,10 @@ export class KeyboardProcessor {
 	private _events: IKeyboardEventItem[];
 	private _inProcess: boolean;
 	private _subscribes: {[key: string]: Function};
-	
+
 	private _expressionManager: ExpressionManager;
 	private _keyboardKeyProcessor: KeyboardKeyProcessor;
-	
+
 	constructor() {
 		this._events = [];
 		this._inProcess = false;
@@ -108,7 +109,7 @@ export class KeyboardProcessor {
 		if (iterator === 0) {
 			this._keyboardKeyProcessor.caretIndex = event.caretIndex;
 		}
-		if (event.keyItem != null && this._keyboardKeyProcessor.dispatchKeyPressEvent(event.keyItem) && event.keyEvent !== null && event.keyEvent !== undefined) {
+		if (event.keyItem && this._keyboardKeyProcessor.dispatchKeyPressEvent(event.keyItem) && event.keyEvent) {
 			event.keyEvent.preventDefault();
 			event.keyEvent.stopPropagation();
 		}
@@ -119,7 +120,7 @@ export class KeyboardProcessor {
 	}
 
 	private _dispatchPasteEvent(content: string): void {
-		
+
 	}
 
 	private _invokeFinishHendler() {
@@ -128,6 +129,7 @@ export class KeyboardProcessor {
 		var caretDomPosition = this._expressionManager.getCaretDomPosition(caretIndex);
 		var complexListRequest = this._keyboardKeyProcessor.getComplexListRequest();
 		this._callHandler(KeyboardProcessEvent.FINISH, {
+			"caretIndex": caretIndex,
 			"elementIndex": caretDomPosition.elementIndex,
 			"elementCaretIndex": caretDomPosition.elementCaretIndex,
 			"displayList": this._expressionManager.generateExpressionDisplayElementList(),

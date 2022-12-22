@@ -21,7 +21,7 @@ class ExpressionComplexListItem implements IExpressionSourceItem {
 	arguments?: ExpressionArgument[];
 	schemaUId?: string;
 	referenceSchemaUId?: string;
-	
+
 
 	focused: boolean = false;
 
@@ -61,7 +61,7 @@ export class ExpressionEditorComponent implements OnInit {
 
 	@ViewChild('visualizator') visualizator!: ElementRef;
 	@ViewChild('elementsLog') elementsLog!: ElementRef;
-	
+
 	caretIndex: number;
 	cursorIndex: number;
 	cursorX: number;
@@ -77,11 +77,11 @@ export class ExpressionEditorComponent implements OnInit {
 	public isComplexListVisible: boolean;
 
 	private _keyUtilities: KeyUtilities;
-	
+
 	formulaDisplayElements: ExpressionDisplayElement[];
 
 	private _keyboardProcessor: KeyboardProcessor;
-	constructor(private _dataService: ExpressionSourceServiceService) { 
+	constructor(private _dataService: ExpressionSourceServiceService) {
 		this.cursorIndex = 0;
 		this.caretIndex = 0;
 		this.cursorX = 0;
@@ -98,14 +98,14 @@ export class ExpressionEditorComponent implements OnInit {
 	}
 
 	onFocus(event: any): void {
-		
+
 	}
 
 	getFontSize(): number {
 		if (!this.visualizator || !this.visualizator.nativeElement) {
 			return 0;
 		}
-		return parseFloat(getComputedStyle(this.visualizator.nativeElement).fontSize);	
+		return parseFloat(getComputedStyle(this.visualizator.nativeElement).fontSize);
 	}
 
 	getComplexLineStyle(): any {
@@ -191,10 +191,16 @@ export class ExpressionEditorComponent implements OnInit {
 	}
 
 	onFinishHandler(response: IKeyboardProcessorResponse): void {
-		this._unSelectCursor();
-		this.formulaDisplayElements = response.displayList;
+		var controlCaretIndex = this._getCaretIndex(this.visualizator.nativeElement)
+		if (!this._areFormulaDisplayElementsEqual(this.formulaDisplayElements, response.displayList)) {
+			this._unSelectCursor();
+			this.formulaDisplayElements = response.displayList;
+		}
+
 		setTimeout(()=>{
-			this.updateCaretPosition(response.elementIndex, response.elementCaretIndex);
+			if (controlCaretIndex !== response.caretIndex) {
+				this.updateCaretPosition(response.elementIndex, response.elementCaretIndex);
+			}
 			if (response.complexListRequest != null) {
 				this.showComplexList(response.complexListRequest, response.elementIndex)
 			} else {
@@ -202,6 +208,23 @@ export class ExpressionEditorComponent implements OnInit {
 			}
 			this.elementsLog.nativeElement.innerHTML = this._keyboardProcessor.getSerializedElements();
 		}, 4);
+	}
+
+	_areFormulaDisplayElementsEqual(expected: ExpressionDisplayElement[], actual: ExpressionDisplayElement[]): boolean {
+		if (expected.length !== actual.length) {
+			return false;
+		}
+		var response: boolean = true;
+		actual.forEach(item => {
+			if (!response) {
+				return;
+			}
+			var expectedItem = expected.filter(x=>x.uId === item.uId)[0];
+			if (!expectedItem || !item.isEqual(expectedItem)) {
+				response = false;
+			}
+		});
+		return response;
 	}
 
 	ngOnInit(): void {
@@ -227,8 +250,8 @@ export class ExpressionEditorComponent implements OnInit {
 	}
 
 	finalizedWork(): void {
-		
-		
+
+
 	}
 
 	onKeyUp(event: KeyboardEvent): void {
@@ -277,7 +300,7 @@ export class ExpressionEditorComponent implements OnInit {
 		} else {
 			range.selectNode(targetElement);
 		}
-		
+
 		const rect = range.getClientRects()[0];
 		if (rect) {
 			response = {
@@ -409,7 +432,7 @@ export class ExpressionEditorComponent implements OnInit {
 
 	private _unSelectCursor(): void{
 		const isSupported = typeof window.getSelection !== "undefined";
-		if (isSupported) { 
+		if (isSupported) {
 			var selection = window.getSelection();
 			if (selection != null) {
 				selection.removeAllRanges();

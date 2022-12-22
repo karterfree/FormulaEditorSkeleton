@@ -9,15 +9,13 @@ export class KeyUtilities {
 		new KeyItem(KeyboardKey.u, KeyUsageMode.ENABLED),
 		new KeyItem(KeyboardKey.z, KeyUsageMode.ENABLED),
 		new KeyItem(KeyboardKey.Control),
-		new KeyItem(KeyboardKey.Shift),
+
 		new KeyItem(KeyboardKey.Alt),
 		new KeyItem(KeyboardKey.ScrollLock),
 		new KeyItem(KeyboardKey.Meta),
 		new KeyItem(KeyboardKey.ContextMenu),
 		new KeyItem(KeyboardKey.NumLock),
-
 		new KeyItem(KeyboardKey.Insert),
-		new KeyItem(KeyboardKey.ScrollLock),
 		new KeyItem(KeyboardKey.Pause),
 		new KeyItem(KeyboardKey.Tab),
 		new KeyItem(KeyboardKey.CapsLock),
@@ -25,6 +23,10 @@ export class KeyUtilities {
 		new KeyItem(KeyboardKey.o, KeyUsageMode.ENABLED),
 		new KeyItem(KeyboardKey.s, KeyUsageMode.ENABLED),
 		new KeyItem(KeyboardKey.x, KeyUsageMode.ENABLED),
+	];
+
+	private _commonChangelessKeys: KeyItem[] = [
+		new KeyItem(KeyboardKey.Shift),
 	];
 
 	private _verticalMoveKeys: KeyItem[] = [
@@ -137,7 +139,7 @@ export class KeyUtilities {
 	}
 
 	public isChangelessKey(keyItem: KeyItem): boolean {
-		return this.isFKey(keyItem);
+		return this.isFKey(keyItem) || this.has(keyItem, this._commonChangelessKeys);
 	}
 
 	public isMathKey(keyItem: KeyItem): boolean {

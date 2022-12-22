@@ -34,7 +34,7 @@ export interface IExpressionSourceRequestFilter {
 	type: ExpressionSourceRequestFilterType,
 	logicalOperation?: ExpressionSourceRequestFilterLogicalOperation,
 	items?: IExpressionSourceRequestFilter[]
-} 
+}
 export interface IExpressionSourceRequest {
 	titlePart: string,
 	filter: IExpressionSourceRequestFilter,
@@ -120,6 +120,13 @@ export class ExpressionSourceServiceService {
 		dataValueType: DataValueType.DATE_TIME,
 		schemaUId: "16be3651-8fe2-4159-8dd0-a803d4683dd3"
 	}, {
+		uId: "4f08db69-6d2f-4b1c-87a4-acddc6c3b9d5",
+		title: "Age",
+		code: "Age",
+		type: ExpressionNodeType.COLUMN,
+		dataValueType: DataValueType.INTEGER,
+		schemaUId: "16be3651-8fe2-4159-8dd0-a803d4683dd3"
+	}, {
 		uId: "a49571cc-a9a9-4c3e-a346-46c466e9a0d3",
 		title: "Type",
 		code: "Type",
@@ -180,6 +187,17 @@ export class ExpressionSourceServiceService {
 			new ExpressionArgument("source1", DataValueType.TEXT),
 			new ExpressionArgument("source2", DataValueType.TEXT)
 		]
+	}, {
+		uId: "5a675f57-b91e-468c-a044-a00531de0afa",
+		title: "IF",
+		code: "IF",
+		type: ExpressionNodeType.FUNCTION,
+		dataValueType: DataValueType.UNSETTED,
+		arguments: [
+			new ExpressionArgument("condition", DataValueType.TEXT),
+			new ExpressionArgument("ifTrue", DataValueType.UNSETTED),
+			new ExpressionArgument("ifFalse", DataValueType.UNSETTED)
+		]
 	}]
 
 	constructor() { }
@@ -230,7 +248,7 @@ export class ExpressionSourceServiceService {
 		if (ExpressionUtilities.isArray(filter.value)) {
 			filter.value.forEach((element: any) => {
 				response = response && fn(propertyValue, element);
-			});	
+			});
 		} else {
 			response = response && fn(propertyValue, filter.value);
 		}

@@ -1,6 +1,8 @@
 import { DataValueType } from "../../util/enums/data-value-type.enum";
 import { ExpressionNodeType } from "../../util/enums/expression-node-type.enum";
+import { KeyboardKey } from "../../util/enums/keyboard-key.enum";
 import { ExpressionUtilities } from "../../util/expression-utilities/expression-utilities";
+import { KeyUtilities } from "../../util/key-utilities/key-utilities";
 import { ExpressionDisplayElement } from "../common/models/expression-display-element/expression-display-element";
 import { ExpressionNode } from "../common/models/expression-node/expression-node";
 import { ExpressionNodeGenerator } from "../expression-node-generator/expression-node-generator";
@@ -171,7 +173,7 @@ export class ExpressionManager {
 			}
 			return displayElement;
 		});
-		
+
 	}
 
 	public getExpressionNodeCaretIndex(element: ExpressionNode, caretIndex: number): number {
@@ -201,8 +203,8 @@ export class ExpressionManager {
 	public removeEmptyElements() {
 		for (let i = this._expressionNodes.length -1; i >= 0; i--) {
 			var node = this._expressionNodes[i];
-			if (node.isEmpty() && !this.canBeEmpty(node)) {
-				this._expressionNodes.splice(i, 1);
+			if (node && node.isEmpty() && !this.canBeEmpty(node)) {
+				this.removeElement(node);
 			}
 		}
 	}
@@ -213,6 +215,10 @@ export class ExpressionManager {
 
 	public removeElement(expressionNode: ExpressionNode | null) {
 		if (expressionNode) {
+			var prevElement = this.getPrevElement(expressionNode);
+			if (ExpressionUtilities.isComplexType(expressionNode.type) && prevElement && expressionNode.isJoinedWith(prevElement) && prevElement.title === KeyboardKey.Dot) {
+				this.removeElement(prevElement);
+			}
 			var positon = this.getElementPosition(expressionNode);
 			this._expressionNodes.splice(positon, 1);
 			if (this.activeNode === expressionNode) {
@@ -292,8 +298,8 @@ export class ExpressionManager {
 		};
 	}
 
-	
 
-	
+
+
 
 }

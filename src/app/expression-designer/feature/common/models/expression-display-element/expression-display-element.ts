@@ -3,13 +3,15 @@ import { ExpressionNodeType } from "src/app/expression-designer/util/enums/expre
 import { ExpressionUtilities } from "src/app/expression-designer/util/expression-utilities/expression-utilities";
 
 export class ExpressionDisplayElement {
+	uId: string;
 	content: string;
 	type: ExpressionNodeType;
 	dataValueType: DataValueType;
 	markedToDelete: boolean;
 	isActive: boolean;
 
-	constructor(content: string, type: ExpressionNodeType, dataValueType: DataValueType) {
+	constructor(uId: string, content: string, type: ExpressionNodeType, dataValueType: DataValueType) {
+		this.uId = uId;
 		this.content = content;
 		this.type = type;
 		this.dataValueType = dataValueType;
@@ -25,7 +27,7 @@ export class ExpressionDisplayElement {
 			response.push(this._generateDataValueTypeStyleClass());
 		}
 		response.push(this._generateActiveStyleClass());
-		
+
 		return response.join(" ");
 	}
 
@@ -76,5 +78,13 @@ export class ExpressionDisplayElement {
 		return this.markedToDelete
 			? "marked-to-delete"
 			: ""
-		}
+	}
+
+	public isEqual(item: ExpressionDisplayElement) {
+		return item.content === this.content &&
+			item.type === this.type &&
+			item.dataValueType === this.dataValueType &&
+			item.markedToDelete === this.markedToDelete &&
+			item.isActive === this.isActive;
+	}
 }

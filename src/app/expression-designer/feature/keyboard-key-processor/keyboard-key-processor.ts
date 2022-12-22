@@ -18,7 +18,7 @@ export class KeyboardKeyProcessor {
 	private _subscribes: {[key: string]: Function};
 	private _rootSchemaUId: string = "25d7c1ab-1de0-4501-b402-02e0e5a72d6e";
 
-	private _keyPressItem: KeyItem | null = null; 
+	private _keyPressItem: KeyItem | null = null;
 
 
 	public get caretIndex(): number {
@@ -333,6 +333,7 @@ export class KeyboardKeyProcessor {
 			return false;
 		} else if (this._keyUtilities.isHorizontalMoveKey(keyItem)) {
 			this.processMoveCaretOpertion(keyItem);
+			return false;
 		} else if (this._keyUtilities.isSingleOperationKey(keyItem) && !this._isInString()) {
 			this.processSingleOpertion(keyItem);
 		} else {
@@ -387,7 +388,7 @@ export class KeyboardKeyProcessor {
 			return expressionNode;
 		}
 		var innerCaretIndex = this._expressionManager.getExpressionNodeCaretIndex(expressionNode, this.caretIndex);
-		
+
 		if (expressionNode.IsFirstCaretIndex(innerCaretIndex)) {
 			var prevExpressionNode = this._expressionManager.getPrevElement(expressionNode);
 			if (prevExpressionNode != null && this._isEditabledElement(prevExpressionNode)) {

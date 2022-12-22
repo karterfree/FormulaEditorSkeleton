@@ -131,7 +131,7 @@ export class ExpressionNode {
 		this._type = ExpressionNodeType.UNSETTED;
 		this._dataValueType = DataValueType.UNSETTED;
 		this._title = "";
-		this._uId = "";
+		this._uId = ExpressionUtilities.generateGUID();
 		this._metaPath = "";
 		this._arguments = [];
 		this._isMarkedToDelete = false;
@@ -187,7 +187,7 @@ export class ExpressionNode {
 	}
 
 	public generateDisplayElement(): ExpressionDisplayElement {
-		var displayElement = new ExpressionDisplayElement(this.title, this.type, this.dataValueType);
+		var displayElement = new ExpressionDisplayElement(this.uId, this.title, this.type, this.dataValueType);
 		displayElement.markedToDelete = this._isMarkedToDelete;
 		return displayElement;
 	}
