@@ -7,12 +7,14 @@ export class ExpressionDisplayElement {
 	type: ExpressionNodeType;
 	dataValueType: DataValueType;
 	markedToDelete: boolean;
+	isActive: boolean;
 
 	constructor(content: string, type: ExpressionNodeType, dataValueType: DataValueType) {
 		this.content = content;
 		this.type = type;
 		this.dataValueType = dataValueType;
 		this.markedToDelete = false;
+		this.isActive = false;
 	}
 
 	public generateVisualizatorStyleClass(): string {
@@ -22,8 +24,16 @@ export class ExpressionDisplayElement {
 		if (this.type === ExpressionNodeType.CONSTANT) {
 			response.push(this._generateDataValueTypeStyleClass());
 		}
+		response.push(this._generateActiveStyleClass());
 		
 		return response.join(" ");
+	}
+
+	private _generateActiveStyleClass(): string {
+		if (this.isActive) {
+			return "active";
+		}
+		return "";
 	}
 
 	private _generateOperationStyleClass(): string {

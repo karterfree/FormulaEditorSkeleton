@@ -5,6 +5,10 @@ export class ExpressionUtilities {
 		return value === null || value === undefined || value === '' || (Array.isArray(value) && !value.length);
 	}
 
+	public static isArray(value: any): boolean {
+		return Array.isArray(value);
+	}
+
 	public static generateGUID(): string {
 		return ExpressionUtilities.uuidPart() + ExpressionUtilities.uuidPart() + '-' + ExpressionUtilities.uuidPart() + '-' + ExpressionUtilities.uuidPart() + '-' +
             ExpressionUtilities.uuidPart() + '-' + ExpressionUtilities.uuidPart() + ExpressionUtilities.uuidPart() + ExpressionUtilities.uuidPart();
@@ -26,5 +30,45 @@ export class ExpressionUtilities {
 			default:
 				return false;
 		}
+	}
+
+	public static areArrayEqual(first: any[] | null | undefined, second: any[] | null | undefined): boolean {
+		if (first === second) {
+			return true;
+		}
+		if (first == null || first === undefined || second == null || second === undefined) {
+			return false;
+		}
+		if (first.length != second.length) {
+			return false;
+		}
+		for (let i = 0; i < first.length; i++) {
+			let fCount = first.filter(x=>x === first[i]).length;
+			let sCount = second.filter(x=>x === first[i]).length;
+			if (fCount === 0 || sCount === 0 || fCount !== sCount) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public static areArrayDeeplyEqual(first: any[] | null | undefined, second: any[] | null | undefined, valuableKeys: string[] = []): boolean {
+		if (first === second) {
+			return true;
+		}
+		if (first == null || first === undefined || second == null || second === undefined) {
+			return false;
+		}
+		if (first.length != second.length) {
+			return false;
+		}
+		for (let i = 0; i < first.length; i++) {
+			let fCount = first.filter(x=>x === first[i]).length;
+			let sCount = second.filter(x=>x === first[i]).length;
+			if (fCount === 0 || sCount === 0 || fCount !== sCount) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

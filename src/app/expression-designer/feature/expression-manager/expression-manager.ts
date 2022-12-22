@@ -164,9 +164,14 @@ export class ExpressionManager {
 	}
 
 	public generateExpressionDisplayElementList(): ExpressionDisplayElement[] {
-		var response: ExpressionDisplayElement[] = [];
-		this._expressionNodes.forEach(item => response.push(item.generateDisplayElement()));
-		return response;
+		return this._expressionNodes.map(item => {
+			var displayElement = item.generateDisplayElement();
+			if (this._activeNode === item) {
+				displayElement.isActive = true;
+			}
+			return displayElement;
+		});
+		
 	}
 
 	public getExpressionNodeCaretIndex(element: ExpressionNode, caretIndex: number): number {

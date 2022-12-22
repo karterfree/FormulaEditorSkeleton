@@ -8,6 +8,7 @@ import { ExpressionDisplayElement } from "../expression-display-element/expressi
 export class ExpressionNode {
 	private _type: ExpressionNodeType;
 	private _dataValueType: DataValueType;
+	private _uId: string;
 	private _title: string;
 	private _metaPath: string;
 	private _arguments: ExpressionArgument[];
@@ -16,6 +17,16 @@ export class ExpressionNode {
 	private _backup: ExpressionNode | null;
 	private _code: string;
 	private _isMarkedToDelete: boolean;
+	private _schemaUId: string;
+	private _referenceSchemaUId: string;
+
+	public get uId() {
+		return this._uId;
+	}
+
+	public set uId(value: string) {
+		this._uId = value;
+	}
 
 	public get title() {
 		return this._title;
@@ -31,6 +42,22 @@ export class ExpressionNode {
 
 	public set code(value: string) {
 		this._code = value;
+	}
+
+	public get schemaUId() {
+		return this._schemaUId;
+	}
+
+	public set schemaUId(value: string) {
+		this._schemaUId = value;
+	}
+
+	public get referenceSchemaUId() {
+		return this._referenceSchemaUId;
+	}
+
+	public set referenceSchemaUId(value: string) {
+		this._referenceSchemaUId = value;
 	}
 
 	public get metaPath() {
@@ -104,6 +131,7 @@ export class ExpressionNode {
 		this._type = ExpressionNodeType.UNSETTED;
 		this._dataValueType = DataValueType.UNSETTED;
 		this._title = "";
+		this._uId = "";
 		this._metaPath = "";
 		this._arguments = [];
 		this._isMarkedToDelete = false;
@@ -111,6 +139,8 @@ export class ExpressionNode {
 		this._inEditStatus = false;
 		this._backup = null;
 		this._code = "";
+		this._schemaUId = "";
+		this._referenceSchemaUId = "";
 	}
 
 	private _backupExpressionNodeContent() {
@@ -119,10 +149,13 @@ export class ExpressionNode {
 	}
 
 	public applyNodeData(sourceNode: IExpressionSourceItem) {
+		this.uId = sourceNode.uId;
 		this.title = sourceNode.title;
 		this.code = sourceNode.code;
 		this.type = sourceNode.type;
 		this.dataValueType = sourceNode.dataValueType;
+		this.schemaUId = sourceNode.schemaUId || "";
+		this.referenceSchemaUId = sourceNode.referenceSchemaUId || "";
 		this.arguments = [...(sourceNode.arguments || [])];
 		this._backup = null;
 		this.inEditStatus = false;
@@ -130,9 +163,12 @@ export class ExpressionNode {
 
 	public rollbackChanges() {
 		if (this._backup !== null) {
+			this.uId = this._backup.uId;
 			this.title = this._backup.title;
 			this.code = this._backup.code;
 			this.type = this._backup.type;
+			this.schemaUId = this._backup.schemaUId;
+			this.referenceSchemaUId = this._backup.referenceSchemaUId;
 			this.dataValueType = this._backup.dataValueType;
 			this.arguments = [...this._backup.arguments];
 		} else {
@@ -217,11 +253,13 @@ export class ExpressionNode {
 
 	public clone() {
 		var clone = new ExpressionNode();
+		clone.uId = this.uId;
 		clone.title = this.title;
 		clone.code = this.code;
 		clone.type = this.type;
 		clone.dataValueType = this.dataValueType;
-		clone.arguments = [...this.arguments];
+		clone.schemaUId = this.schemaUId;
+		clone.referenceSchemaUId = this.referenceSchemaUId;
 		clone.arguments = [...this.arguments];
 		return clone;
 	}

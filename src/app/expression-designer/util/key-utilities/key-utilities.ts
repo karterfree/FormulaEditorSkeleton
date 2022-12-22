@@ -25,7 +25,6 @@ export class KeyUtilities {
 		new KeyItem(KeyboardKey.o, KeyUsageMode.ENABLED),
 		new KeyItem(KeyboardKey.s, KeyUsageMode.ENABLED),
 		new KeyItem(KeyboardKey.x, KeyUsageMode.ENABLED),
-		new KeyItem(KeyboardKey.v, KeyUsageMode.ENABLED),
 	];
 
 	private _verticalMoveKeys: KeyItem[] = [
@@ -85,6 +84,10 @@ export class KeyUtilities {
 		new KeyItem(KeyboardKey.Not),
 	];
 
+	private _pasteKeys: KeyItem[] = [
+		new KeyItem(KeyboardKey.v, KeyUsageMode.ENABLED),
+	];
+
 	private _commandKeys: KeyItem[] = [
 		new KeyItem(KeyboardKey.AtSign, KeyUsageMode.IGNORED, KeyUsageMode.IGNORED, KeyUsageMode.ENABLED),
 	];
@@ -93,8 +96,20 @@ export class KeyUtilities {
 		new KeyItem(KeyboardKey.Escape, KeyUsageMode.IGNORED, KeyUsageMode.IGNORED, KeyUsageMode.IGNORED),
 	];
 
+	private _enterKeys: KeyItem[] = [
+		new KeyItem(KeyboardKey.Enter)
+	];
+
 	private has(keyItem: KeyItem, list: KeyItem[]): boolean {
 		return list.filter(x=>keyItem.equal(x)).length > 0;
+	}
+
+	public isPasteKey(keyItem: KeyItem): boolean {
+		return this.has(keyItem, this._pasteKeys);
+	}
+
+	public isEnterKey(keyItem: KeyItem): boolean {
+		return this.has(keyItem, this._enterKeys);
 	}
 
 	public isDeniedKey(keyItem: KeyItem): boolean {

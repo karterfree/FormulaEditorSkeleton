@@ -1,4 +1,4 @@
-import { IExpressionSourceItem, IExpressionSourceRequest } from "../../data-access/expression-source-api/expression-source-service.service";
+import { ExpressionSourceRequestFilterLogicalOperation, ExpressionSourceRequestFilterType, IExpressionSourceItem, IExpressionSourceRequest } from "../../data-access/expression-source-api/expression-source-service.service";
 import { ComparisonType } from "../../util/enums/comparison-type.enum";
 import { DataValueType } from "../../util/enums/data-value-type.enum";
 import { ExpressionNodeType } from "../../util/enums/expression-node-type.enum";
@@ -10,14 +10,15 @@ import { KeyboardProcessEvent } from "../common/enums/keyboard-process-event.enu
 import { ExpressionNode } from "../common/models/expression-node/expression-node";
 import { ExpressionManager } from "../expression-manager/expression-manager";
 import { ExpressionNodeGenerator } from "../expression-node-generator/expression-node-generator";
-import { ICommandOperationRequest, ICommandOperationResponse, IExtendColumnRequest, IExtendColumnResponse } from "../keyboard-processor/keyboard-processor";
 
 export class KeyboardKeyProcessor {
 	private _expressionManager: ExpressionManager;
 	private _keyUtilities: KeyUtilities;
 	private _caretIndex: number;
 	private _subscribes: {[key: string]: Function};
+	private _rootSchemaUId: string = "25d7c1ab-1de0-4501-b402-02e0e5a72d6e";
 
+	private _keyPressItem: KeyItem | null = null; 
 
 
 	public get caretIndex(): number {
@@ -45,9 +46,12 @@ export class KeyboardKeyProcessor {
 		} else if (keyItem.key === KeyboardKey.Home) {
 			this.caretIndex = 0;
 		}
+		var activeNode = this._expressionManager.activeNode;
 		var newActiveNode = this._expressionManager.getCurrentElement(this.caretIndex);
-		if (this._expressionManager.activeNode !== newActiveNode && this._isActiveNodeInEditStatus()) {
-			this._unsetActiveNode();
+		if (activeNode != null && activeNode !== newActiveNode) {
+			if (this._isActiveNodeInEditStatus() && !activeNode.isEmpty()) {
+				this._unsetActiveNode();
+			}
 			this._expressionManager.activeNode = newActiveNode;
 		}
 	}
@@ -95,6 +99,14 @@ export class KeyboardKeyProcessor {
 		}
 	}
 
+	private _unmarkNextChainNodesToDelete(expressionNode: ExpressionNode) {
+		var next = this._expressionManager.getNextElement(expressionNode);
+		if (next != null && expressionNode.isJoinedWith(next)) {
+			next.unMarkToDelete();
+			this._unmarkNextChainNodesToDelete(next);
+		}
+	}
+
 	private _removeMarkedElements(): void {
 		var items = this._expressionManager.getMarkedToDeleteElements();
 		if (items.length <= 0) {
@@ -137,7 +149,7 @@ export class KeyboardKeyProcessor {
 			this.processExtendendOpertion(keyItem, prevExpressionNode);
 			return;
 		}
-		if (keyItem.key === KeyboardKey.Space && !expressionNode.isEditableString()) {
+		if (keyItem.key === KeyboardKey.Space && !expressionNode.isEditableString() && !this._isActiveNodeInEditStatus()) {
 			return;
 		}
 		if (keyItem.key === KeyboardKey.Quotation && expressionNode.isEmpty() && (expressionNode.type === ExpressionNodeType.CONSTANT && (expressionNode.dataValueType === DataValueType.UNSETTED ||
@@ -191,16 +203,56 @@ export class KeyboardKeyProcessor {
 		if (prevNode != null && prevNode.isJoinedWith(this._expressionManager.activeNode)) {
 			return {
 				titlePart: this._expressionManager.activeNode.title,
-				comparisonType: ComparisonType.START_WITH,
-				availableTypes: [ExpressionNodeType.COLUMN],
-				referenceSchemaUId: ''
+				filter: {
+					logicalOperation: ExpressionSourceRequestFilterLogicalOperation.AND,
+					type: ExpressionSourceRequestFilterType.FilterGroup,
+					items: [{
+						type: ExpressionSourceRequestFilterType.ComparisonFilter,
+						propertyName: "schemaUId",
+						comparisonType: ComparisonType.EQUAL,
+						value: prevNode.referenceSchemaUId
+					}, {
+						type: ExpressionSourceRequestFilterType.ComparisonFilter,
+						propertyName: "type",
+						comparisonType: ComparisonType.EQUAL,
+						value: ExpressionNodeType.COLUMN
+					}]
+				},
+				keyItem: this._keyPressItem
 			}
 		}
 		return {
 			titlePart: this._expressionManager.activeNode.title,
-			comparisonType: ComparisonType.START_WITH,
-			availableTypes: [],
-			referenceSchemaUId: ''
+			filter: {
+				logicalOperation: ExpressionSourceRequestFilterLogicalOperation.OR,
+				type: ExpressionSourceRequestFilterType.FilterGroup,
+				items: [{
+					logicalOperation: ExpressionSourceRequestFilterLogicalOperation.AND,
+					type: ExpressionSourceRequestFilterType.FilterGroup,
+					items: [{
+						type: ExpressionSourceRequestFilterType.ComparisonFilter,
+						propertyName: "schemaUId",
+						comparisonType: ComparisonType.EQUAL,
+						value: this._rootSchemaUId
+					}, {
+						type: ExpressionSourceRequestFilterType.ComparisonFilter,
+						propertyName: "type",
+						comparisonType: ComparisonType.EQUAL,
+						value: ExpressionNodeType.COLUMN
+					}]
+				}, {
+					type: ExpressionSourceRequestFilterType.ComparisonFilter,
+					propertyName: "type",
+					comparisonType: ComparisonType.EQUAL,
+					value: ExpressionNodeType.FUNCTION
+				}, {
+					type: ExpressionSourceRequestFilterType.ComparisonFilter,
+					propertyName: "type",
+					comparisonType: ComparisonType.EQUAL,
+					value: ExpressionNodeType.SYSTEM_SETTING
+				}]
+			},
+			keyItem: this._keyPressItem
 		}
 	}
 
@@ -225,6 +277,8 @@ export class KeyboardKeyProcessor {
 		var commandNode = ExpressionNodeGenerator.generateEmptyExpressionNode();
 		var dotElement = ExpressionNodeGenerator.generateSingleOperationExpressionNode(KeyboardKey.Dot);
 		commandNode.extKey = dotElement.extKey = expressionNode.extKey;
+		dotElement.schemaUId = expressionNode.schemaUId;
+		dotElement.referenceSchemaUId = expressionNode.referenceSchemaUId;
 		this._expressionManager.insertAfter(dotElement, expressionNode);
 		this._expressionManager.insertAfter(commandNode, dotElement);
 		this._setCommandNodeToEditable(commandNode);
@@ -238,7 +292,13 @@ export class KeyboardKeyProcessor {
 			return false;
 		}
 		var targetPosition = this._expressionManager.getActualExpressionNodeCaretIndex(activeNode, 0);
-		activeNode.applyNodeData(complexItem);
+		if (activeNode.uId === complexItem.uId) {
+			activeNode.rollbackChanges();
+			this._unmarkNextChainNodesToDelete(activeNode);
+		} else {
+			activeNode.applyNodeData(complexItem);
+			this._removeMarkedElements();
+		}
 		this.caretIndex = targetPosition + activeNode.contentLength;
 		if (activeNode.type === ExpressionNodeType.FUNCTION) {
 			var additionalNodes = ExpressionNodeGenerator.generateCustomFunctionArgumentsExpressionNodeGroup(activeNode.arguments);
@@ -249,19 +309,21 @@ export class KeyboardKeyProcessor {
 			}
 			additionalNodes.reverse().forEach(x=>activeNode != null && this._expressionManager.insertAfter(x, activeNode));
 		}
-		this._removeMarkedElements();
 		return true;
 	}
 
-	public dispatchKeyPressEvent(event: KeyboardEvent): boolean {
-		const keyItem: KeyItem = KeyItem.fromKeyboardEvent(event);
-		if (this._keyUtilities.isDeniedKey(keyItem) || this._keyUtilities.isVerticalMoveKey(keyItem)) {
+	public dispatchKeyPressEvent(keyItem: KeyItem): boolean {
+		this._keyPressItem = keyItem;
+		if (this._keyUtilities.isDeniedKey(keyItem)) {
 			return true;
 		}
-		if (this._keyUtilities.isCancelKey(keyItem)) {
-			if (this._isActiveNodeInEditStatus()) {
+		if (this._isActiveNodeInEditStatus()) {
+			if (this._keyUtilities.isCancelKey(keyItem)) {
 				this._unsetActiveNode();
+				return true;
 			}
+		}
+		if (this._keyUtilities.isVerticalMoveKey(keyItem) || this._keyUtilities.isEnterKey(keyItem)) {
 			return true;
 		}
 		if (this._keyUtilities.isRemoveKey(keyItem)) {
@@ -281,25 +343,6 @@ export class KeyboardKeyProcessor {
 			}
 		}
 
-		return true;
-		if (!this._keyUtilities.isRemoveKey(keyItem) && this._expressionManager.hasMarkToDelete()) {
-			this._expressionManager.removeAllMarksToDelete();
-		}
-		if (this._keyUtilities.isRemoveKey(keyItem)) {
-			this.processRemoveOpertion(keyItem);
-		} else if (this._keyUtilities.isChangelessKey(keyItem)) {
-			return false;
-		} else if (this._keyUtilities.isHorizontalMoveKey(keyItem)) {
-			this.processMoveCaretOpertion(keyItem);
-		} else if (this._keyUtilities.isSingleOperationKey(keyItem) && !this._isInString()) {
-			this.processSingleOpertion(keyItem);
-		} else {
-			if (this._keyUtilities.isCommandKey(keyItem) && this.canProcessCommandKey()) {
-				this.processCommandOpertion(keyItem);
-			} else {
-				this.processCommonOpertion(keyItem);
-			}
-		}
 		return true;
 	}
 
@@ -331,6 +374,7 @@ export class KeyboardKeyProcessor {
 			if (zeroPosition < this._caretIndex) {
 				this._caretIndex = zeroPosition + activeNode.contentLength;
 			}
+			this._unmarkNextChainNodesToDelete(activeNode);
 			this._expressionManager.activeNode = null;
 			return true;
 		}
@@ -343,29 +387,24 @@ export class KeyboardKeyProcessor {
 			return expressionNode;
 		}
 		var innerCaretIndex = this._expressionManager.getExpressionNodeCaretIndex(expressionNode, this.caretIndex);
+		
 		if (expressionNode.IsFirstCaretIndex(innerCaretIndex)) {
 			var prevExpressionNode = this._expressionManager.getPrevElement(expressionNode);
-			if (prevExpressionNode != null) {
-				if (this._isEditabledElement(prevExpressionNode)) {
-					return prevExpressionNode;
-				} else if (!prevExpressionNode.isJoinedWith(expressionNode)) {
-					var newExpressionNode = ExpressionNodeGenerator.generateEmptyConstantExpressionNode();
-					this._expressionManager.insertBefore(newExpressionNode, expressionNode);
-					return newExpressionNode;
-				}
-			} else {
+			if (prevExpressionNode != null && this._isEditabledElement(prevExpressionNode)) {
+				return prevExpressionNode;
+			} else if (prevExpressionNode == null || !prevExpressionNode.isJoinedWith(expressionNode)) {
 				var newExpressionNode = ExpressionNodeGenerator.generateEmptyConstantExpressionNode();
 				this._expressionManager.insertBefore(newExpressionNode, expressionNode);
 				return newExpressionNode;
 			}
 		}
-		var nextEditableElement = this._getNextEditableElement(expressionNode);
+		var nextEditableElement = this._getNextAfterChainElement(expressionNode);
 		if (nextEditableElement != null && this._isEditabledElement(nextEditableElement)) {
 			return nextEditableElement;
 		} else  {
 			var newExpressionNode = ExpressionNodeGenerator.generateEmptyConstantExpressionNode();
 			if (nextEditableElement != null) {
-				this._expressionManager.insertAfter(newExpressionNode, nextEditableElement);
+				this._expressionManager.insertBefore(newExpressionNode, nextEditableElement);
 			} else {
 				this._expressionManager.add(newExpressionNode)
 			}
@@ -373,17 +412,16 @@ export class KeyboardKeyProcessor {
 		}
 	}
 
-	private _getNextEditableElement(currentElement: ExpressionNode): ExpressionNode | null {
+	private _getNextAfterChainElement(currentElement: ExpressionNode): ExpressionNode | null {
 		var nextElement = this._expressionManager.getNextElement(currentElement);
 		if (nextElement == null) {
 			return null;
 		}
 		if (currentElement.isJoinedWith(nextElement)) {
-			return this._getNextEditableElement(nextElement);
+			return this._getNextAfterChainElement(nextElement);
 		}
 		return nextElement;
 	}
-
 
 	private _isInString(): boolean {
 		var expressionNode = this._expressionManager.getCurrentElement(this.caretIndex);
